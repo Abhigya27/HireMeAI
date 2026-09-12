@@ -8,7 +8,7 @@ from docx import Document
 
 import config
 from rag import embed_text
-from groq_client import complete
+from client import complete
 
 
 def extract_text(filename: str, file_bytes: bytes) -> str:
@@ -40,7 +40,7 @@ def _embedding_similarity(resume_text: str, jd_text: str) -> float:
         np.dot(resume_vec, jd_vec)
         / (np.linalg.norm(resume_vec) * np.linalg.norm(jd_vec) + 1e-8)
     )
-    # cosine is roughly in [-1, 1]; rescale to a 0-100 baseline score
+    
     return float(np.clip((cosine + 1) / 2 * 100, 0, 100))
 
 
