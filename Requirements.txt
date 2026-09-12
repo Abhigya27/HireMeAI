@@ -11,3 +11,6 @@ pypdf
 python-docx
 httpx
 config
+streamlit
+httpx
+python-dotenv
