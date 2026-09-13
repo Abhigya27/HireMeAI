@@ -20,10 +20,10 @@ BACKEND_URL = _get_backend_url()
 
 # ---- Edit these with your real links ----
 SOCIAL_LINKS = {
-    "Email": ("✉️", "mailto:your_email@example.com"),
     "GitHub": ("💻", "https://github.com/your-username"),
     "LinkedIn": ("🔗", "https://linkedin.com/in/your-profile"),
-    "Instagram": ("📸", "https://instagram.com/your-handle"),
+    "X": ("🐤", "https://x.com/AbhigyaNarain"),
+    "LeetCode": ("👨‍💻", "https://leetcode.com/u/abhigya_27/"),
 }
 
 st.set_page_config(page_title="Ask Abhigya", page_icon="🤖", layout="wide")
@@ -35,25 +35,53 @@ st.set_page_config(page_title="Ask Abhigya", page_icon="🤖", layout="wide")
 def render_sidebar():
     with st.sidebar:
         st.title("Abhigya Narain")
-        st.caption("AI/ML Engineer")  # edit as needed
+        st.caption("AI Engineer")  # edit as needed
         st.divider()
-
+        st.subheader("Email : narainabhigya27@gmail.com")
         st.subheader("Connect")
         for label, (icon, url) in SOCIAL_LINKS.items():
             st.markdown(f"{icon} [{label}]({url})")
 
         st.divider()
-        st.caption(f"Backend: {BACKEND_URL}")
+        # st.caption(f"Backend: {BACKEND_URL}")
+
+
+def render_nav():
+    """Two buttons standing in for tabs. Not a layout container like st.tabs,
+    so it doesn't block st.chat_input from pinning to the bottom of the page
+    when the chat view is active -- and lets us skip rendering chat_input
+    entirely when the JD Matcher view is active, instead of it floating over
+    every view.
+    """
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button(
+            "💬 Chat",
+            use_container_width=True,
+            type="primary" if st.session_state.active_view == "chat" else "secondary",
+        ):
+            st.session_state.active_view = "chat"
+            st.rerun()
+    with col2:
+        if st.button(
+            "📄 Job Description Matcher",
+            use_container_width=True,
+            type="primary" if st.session_state.active_view == "jd" else "secondary",
+        ):
+            st.session_state.active_view = "jd"
+            st.rerun()
 
 
 # ---------------------------------------------------------------------------
 # Chat tab (history-aware conversational RAG)
 # ---------------------------------------------------------------------------
-def init_chat_state():
+def init_app_state():
     if "session_id" not in st.session_state:
         st.session_state.session_id = str(uuid.uuid4())
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    if "active_view" not in st.session_state:
+        st.session_state.active_view = "chat"  # which of the two sections is showing
 
 
 def stream_chat_response(query: str):
@@ -68,8 +96,9 @@ def stream_chat_response(query: str):
 def render_chat_tab():
     """Renders the header, clear button, and scrollable message history.
     Returns the container so main() can stream new messages into the same
-    visual box (st.chat_input has to live outside the tab to stay pinned to
-    the bottom of the page — see main()).
+    visual box -- chat_input itself is called separately in main(), directly
+    in the script flow (not inside this function), so it stays pinned to the
+    bottom of the page.
     """
     header_col, clear_col = st.columns([5, 1])
     with header_col:
@@ -161,19 +190,25 @@ def render_jd_tab():
 # Main
 # ---------------------------------------------------------------------------
 def main():
-    init_chat_state()
+    init_app_state()
     render_sidebar()
     st.title("Ask Abhigya 🤖")
+    st.caption("A personal AI chatbot and job-fit matcher — chat with Abhigya's resume, or check how well a job description matches his skills.")
 
-    tab_jd, tab_chat = st.tabs(["📄 Job Description Matcher", "💬 Chat"])
-    with tab_jd:
+    render_nav()
+    st.divider()
+
+    if st.session_state.active_view == "jd":
         render_jd_tab()
-    with tab_chat:
-        chat_box = render_chat_tab()
+        return  # no chat_input on this view -- nothing left to do this run
 
-    # IMPORTANT: chat_input must be called at the root level (not nested inside
-    # st.tabs) for Streamlit to pin it to the true bottom of the page. It will
-    # stay visible across both tabs -- a known tradeoff of this pattern.
+    # --- Chat view ---
+    chat_box = render_chat_tab()
+
+    # Calling chat_input directly in the main script flow (not nested inside
+    # st.tabs/st.columns/etc.) is what lets Streamlit pin it to the true
+    # bottom of the page. Because it's only reached when active_view == "chat",
+    # it also simply doesn't exist while the JD Matcher view is showing.
     query = st.chat_input("Ask a question about Abhigya...")
     if query:
         st.session_state.messages.append({"role": "user", "content": query})
