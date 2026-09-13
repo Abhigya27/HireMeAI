@@ -7,23 +7,35 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+def _get_backend_url() -> str:
+    # Streamlit Community Cloud injects secrets via st.secrets, not plain env vars.
+    # Falls back to .env / OS env var for local development.
+    try:
+        return st.secrets["BACKEND_URL"]
+    except Exception:
+        return os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
 
+
+BACKEND_URL = _get_backend_url()
+
+# ---- Edit these with your real links ----
 SOCIAL_LINKS = {
-    "Email": ("✉️", "narainabhigya27@gmail.com"),
-    "GitHub": ("💻", "https://github.com/Abhigya27"),
-    "LinkedIn": ("🔗", "https://www.linkedin.com/in/abhigya-narain-11643b2b5/"),
-    "X (twitter)": ("🐤", "https://x.com/AbhigyaNarain"),
+    "Email": ("✉️", "mailto:your_email@example.com"),
+    "GitHub": ("💻", "https://github.com/your-username"),
+    "LinkedIn": ("🔗", "https://linkedin.com/in/your-profile"),
+    "Instagram": ("📸", "https://instagram.com/your-handle"),
 }
 
 st.set_page_config(page_title="Ask Abhigya", page_icon="🤖", layout="wide")
-st.write("Hi! I am Abhigya's personal chatbot, here to answer questions about him")
 
 
+# ---------------------------------------------------------------------------
+# Sidebar
+# ---------------------------------------------------------------------------
 def render_sidebar():
     with st.sidebar:
         st.title("Abhigya Narain")
-        st.caption("AI/ML Engineer")  
+        st.caption("AI/ML Engineer")  # edit as needed
         st.divider()
 
         st.subheader("Connect")
@@ -34,7 +46,9 @@ def render_sidebar():
         st.caption(f"Backend: {BACKEND_URL}")
 
 
-
+# ---------------------------------------------------------------------------
+# Chat tab (history-aware conversational RAG)
+# ---------------------------------------------------------------------------
 def init_chat_state():
     if "session_id" not in st.session_state:
         st.session_state.session_id = str(uuid.uuid4())
@@ -52,8 +66,11 @@ def stream_chat_response(query: str):
 
 
 def render_chat_tab():
-    init_chat_state()
-
+    """Renders the header, clear button, and scrollable message history.
+    Returns the container so main() can stream new messages into the same
+    visual box (st.chat_input has to live outside the tab to stay pinned to
+    the bottom of the page — see main()).
+    """
     header_col, clear_col = st.columns([5, 1])
     with header_col:
         st.subheader("Chat with Abhigya's AI")
@@ -70,27 +87,19 @@ def render_chat_tab():
             st.session_state.messages = []
             st.rerun()
 
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+    # fixed-height container -> scrolls internally instead of growing the page
+    chat_box = st.container(height=500)
+    with chat_box:
+        for msg in st.session_state.messages:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
 
-    query = st.chat_input("Ask a question about Abhigya...")
-    if query:
-        st.session_state.messages.append({"role": "user", "content": query})
-        with st.chat_message("user"):
-            st.markdown(query)
-
-        with st.chat_message("assistant"):
-            try:
-                full_response = st.write_stream(stream_chat_response(query))
-            except httpx.HTTPError as e:
-                full_response = f"Sorry, something went wrong talking to the backend: {e}"
-                st.error(full_response)
-
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
+    return chat_box
 
 
-
+# ---------------------------------------------------------------------------
+# JD Matcher tab
+# ---------------------------------------------------------------------------
 def score_band(score: float):
     if score >= 75:
         return "success", "Strong fit"
@@ -148,8 +157,11 @@ def render_jd_tab():
             )
 
 
-
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 def main():
+    init_chat_state()
     render_sidebar()
     st.title("Ask Abhigya 🤖")
 
@@ -157,7 +169,26 @@ def main():
     with tab_jd:
         render_jd_tab()
     with tab_chat:
-        render_chat_tab()
+        chat_box = render_chat_tab()
+
+    # IMPORTANT: chat_input must be called at the root level (not nested inside
+    # st.tabs) for Streamlit to pin it to the true bottom of the page. It will
+    # stay visible across both tabs -- a known tradeoff of this pattern.
+    query = st.chat_input("Ask a question about Abhigya...")
+    if query:
+        st.session_state.messages.append({"role": "user", "content": query})
+        with chat_box:
+            with st.chat_message("user"):
+                st.markdown(query)
+
+            with st.chat_message("assistant"):
+                try:
+                    full_response = st.write_stream(stream_chat_response(query))
+                except httpx.HTTPError as e:
+                    full_response = f"Sorry, something went wrong talking to the backend: {e}"
+                    st.error(full_response)
+
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
 
 
 if __name__ == "__main__":
