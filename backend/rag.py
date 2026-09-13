@@ -75,7 +75,7 @@ def get_index() -> tuple[faiss.Index, list[str]]:
     return _index_cache, _chunks_cache
 
 
-def retrieve(query: str, index: faiss.Index, chunk_mapping: list[str], k: int = 3) -> list[str]:
+def retrieve(query: str, index: faiss.Index, chunk_mapping: list[str], k: int = 5) -> list[str]:
     query_vec = embed_text(query)
     _distances, indices = index.search(np.array([query_vec]), k)
     return [chunk_mapping[i] for i in indices[0] if i != -1]
@@ -87,10 +87,26 @@ def build_answer_prompt(context_chunks: list[str], query: str, history: list[dic
     history_block = ""
     if history:
         turns = "\n".join(f"{h['role']}: {h['content']}" for h in history)
-        history_block = f"\nConversation so far:\n{turns}\n"
+        history_block = f"""
+Conversation so far (use this ONLY to keep continuity and resolve references like "it"/
+"he"/ordinal mentions — it is NOT a source of new facts):
+{turns}
+"""
 
-    return f"""You are answering questions about Abhigya Narain, using only the context provided below.
-If the answer isn't in the context, say you don't know rather than making something up.
+    return f"""You are answering questions about Abhigya Narain, using ONLY the information in
+the Context section below.
+
+Rules:
+- Base every factual claim strictly on the Context. Do not use outside knowledge, and do not
+  invent, assume, or infer details that aren't explicitly stated there.
+- Never fill gaps with hedged guesses ("likely", "probably", "may have used", "could be",
+  "possibly"). If a detail isn't in the Context, say plainly that it isn't mentioned —
+  don't dress up a guess as an answer.
+- Don't attribute Abhigya's general skills, tools, or technology list to a specific project
+  unless the Context explicitly states that project uses them. A skill appearing elsewhere
+  in his profile does not mean it was used in the thing being asked about.
+- When the Context does contain relevant detail, use all of it and give a complete,
+  well-organized answer — don't compress real, available detail into a one-line summary.
 {history_block}
 Context:
 {context}
