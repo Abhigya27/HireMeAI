@@ -1,9 +1,10 @@
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(BASE_DIR)
 
-DATA_DIR = os.path.join(BASE_DIR, "data")
-INFO_TXT_PATH = os.path.join(DATA_DIR, "info.txt")
+DATA_DIR = os.path.join(PROJECT_DIR, "Data")
+INFO_TXT_PATH = os.path.join(DATA_DIR, "profile.txt")
 RESUME_TXT_PATH = os.path.join(DATA_DIR, "resume.txt")
 
 FAISS_STORE_DIR = os.path.join(BASE_DIR, "faiss_store")
