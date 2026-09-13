@@ -1,3 +1,4 @@
+import re
 import sqlite3
 from contextlib import contextmanager
 
@@ -66,21 +67,39 @@ def condense_query(session_id: str, new_query: str) -> str:
 
     history_text = "\n".join(f"{h['role']}: {h['content']}" for h in history)
 
-    prompt = f"""Given the conversation history and a follow-up question, rewrite the follow-up
-as a standalone question that can be understood without the history. If the follow-up
-question is already standalone, return it unchanged. Only output the rewritten question,
-nothing else, no quotes, no preamble.
+    prompt = f"""You resolve follow-up questions in a conversation into standalone questions.
 
 Conversation history:
 {history_text}
 
 Follow-up question: {new_query}
 
-Standalone question:"""
+Instructions:
+- Rewrite the follow-up so it can be understood with no access to the history above.
+- If it's already standalone, keep it unchanged.
+- Pay close attention to ordinal or positional references such as "the first one", "the
+  third project", "the second last thing", "the last one mentioned". Before answering,
+  explicitly count the items in the relevant list from the history: count forward from the
+  start for "first/second/third...", and count backward from the end for
+  "last/second-last/second-to-last/third-last...". Double-check your count is correct
+  before naming the item — a common mistake is picking the last item when asked for the
+  second-last, so verify by counting on your fingers, not by guessing.
+- Only resolve references using what is actually written in the history — never guess.
+
+First, on 2-3 short scratch lines, show your counting/reasoning.
+Then, on the FINAL line of your response, write ONLY the rewritten standalone question,
+prefixed exactly with "STANDALONE:" and nothing else on that line.
+"""
 
     try:
-        rewritten = complete(prompt, temperature=0.0)
-        return rewritten.strip().strip('"')
+        raw = complete(prompt, temperature=0.0)
+        match = re.search(r"STANDALONE:\s*(.+)", raw)
+        if match:
+            rewritten = match.group(1).strip()
+        else:
+            lines = [line.strip() for line in raw.strip().splitlines() if line.strip()]
+            rewritten = lines[-1] if lines else new_query
+        return rewritten.strip('"')
     except Exception as e:
         print(f"[memory] condense_query failed, falling back to raw query: {e}")
         return new_query
