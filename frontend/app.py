@@ -43,7 +43,6 @@ def render_sidebar():
             st.markdown(f"{icon} [{label}]({url})")
 
         st.divider()
-        # st.caption(f"Backend: {BACKEND_URL}")
 
 
 def render_nav():
@@ -140,12 +139,12 @@ def score_band(score: float):
 
 def render_jd_tab():
     st.subheader("Job Description Matcher")
-    st.write("Upload a job description and see how well Abhigya's profile matches it.")
+    st.write("Upload a job description and see a field-by-field comparison against Abhigya's resume.")
 
     uploaded = st.file_uploader("Upload job description", type=["txt", "pdf", "docx"])
 
     if uploaded and st.button("Check fit", type="primary"):
-        with st.spinner("Analyzing match..."):
+        with st.spinner("Comparing resume against the job description..."):
             try:
                 files = {
                     "file": (
@@ -166,23 +165,34 @@ def render_jd_tab():
 
         st.metric("Fit Score", f"{score}/100")
         st.progress(min(max(score / 100, 0.0), 1.0))
-        getattr(st, level)(f"**{label}** — {result.get('verdict', '')}")
+        getattr(st, level)(f"**{label}** — {result.get('final_verdict', '')}")
 
-        match_col, gap_col = st.columns(2)
-        with match_col:
-            st.markdown("**Matching skills**")
-            for skill in result.get("matching_skills", []):
-                st.markdown(f"- ✅ {skill}")
-        with gap_col:
-            st.markdown("**Missing skills**")
-            for skill in result.get("missing_skills", []):
-                st.markdown(f"- ❌ {skill}")
+        topic_verdicts = result.get("topic_verdicts", [])
+        if topic_verdicts:
+            st.markdown("**Field-by-field breakdown**")
+            for item in topic_verdicts:
+                st.markdown(f"- **{item.get('topic', '')}:** {item.get('verdict', '')}")
 
-        with st.expander("Reasoning & score breakdown"):
-            st.write(result.get("reasoning", ""))
+        transferable = result.get("transferable_skills", [])
+        if transferable:
+            st.markdown("**Transferable skills**")
+            st.caption("Skills the job asks for that don't appear by name, but have a genuine equivalent in the resume.")
+            for t in transferable:
+                st.markdown(
+                    f"- Job wants **{t.get('required', '')}** → resume has **{t.get('have_instead', '')}** "
+                    f"— {t.get('why_similar', '')}"
+                )
+
+        gaps = result.get("genuine_gaps", [])
+        if gaps:
+            st.markdown("**Genuine gaps**")
+            for gap in gaps:
+                st.markdown(f"- ❌ {gap}")
+
+        with st.expander("Score breakdown"):
             st.caption(
                 f"Embedding similarity: {result.get('embedding_score')} | "
-                f"LLM score: {result.get('llm_score')}"
+                f"LLM assessment score: {result.get('llm_score')}"
             )
 
 
