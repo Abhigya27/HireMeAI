@@ -1,10 +1,9 @@
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = os.path.dirname(BASE_DIR)
 
-DATA_DIR = os.path.join(PROJECT_DIR, "Data")
-INFO_TXT_PATH = os.path.join(DATA_DIR, "profile.txt")
+DATA_DIR = os.path.join(BASE_DIR, "data")
+INFO_TXT_PATH = os.path.join(DATA_DIR, "info.txt")
 RESUME_TXT_PATH = os.path.join(DATA_DIR, "resume.txt")
 
 FAISS_STORE_DIR = os.path.join(BASE_DIR, "faiss_store")
@@ -18,4 +17,11 @@ EMBEDDING_DIM = 384
 
 CHAT_MODEL = "openai/gpt-oss-120b"
 
-MAX_HISTORY_TURNS = 5
+# how many past turns (user+assistant messages) to pull for history-aware chat
+MAX_HISTORY_TURNS = 6
+
+# chunking: max words per chunk (whole paragraphs under this stay intact),
+# and how many trailing words carry over into the next chunk when a section
+# has to be split, so a fact near the boundary isn't lost from every chunk
+CHUNK_MAX_WORDS = 80
+CHUNK_OVERLAP_WORDS = 15
