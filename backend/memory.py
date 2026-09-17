@@ -13,6 +13,11 @@ CREATE TABLE IF NOT EXISTS turns (
     content TEXT NOT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS session_state (
+    session_id TEXT PRIMARY KEY,
+    active_project TEXT
+);
 """
 
 
@@ -27,7 +32,7 @@ def _connect():
 
 def init_db():
     with _connect() as conn:
-        conn.execute(SCHEMA)
+        conn.executescript(SCHEMA)
         conn.commit()
 
 
@@ -52,6 +57,37 @@ def get_history(session_id: str, limit: int = config.MAX_HISTORY_TURNS) -> list[
 def clear_history(session_id: str):
     with _connect() as conn:
         conn.execute("DELETE FROM turns WHERE session_id = ?", (session_id,))
+        conn.execute("DELETE FROM session_state WHERE session_id = ?", (session_id,))
+        conn.commit()
+
+
+def get_active_project(session_id: str) -> str | None:
+    """The GitHub project (if any) that route_project_query last flagged as
+    the subject of an "overview", so a later confirmation/follow-up message
+    ("yes", "tell me about the backend") can be recognized as a deep-dive on
+    that same project rather than a fresh, unrelated mention.
+    """
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT active_project FROM session_state WHERE session_id = ?",
+            (session_id,),
+        ).fetchone()
+    return row[0] if row else None
+
+
+def set_active_project(session_id: str, project_key: str | None):
+    """Upsert this session's active project. Called after an "overview"
+    reply so the immediately following turn is eligible for "deep_dive".
+    """
+    with _connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO session_state (session_id, active_project)
+            VALUES (?, ?)
+            ON CONFLICT(session_id) DO UPDATE SET active_project = excluded.active_project
+            """,
+            (session_id, project_key),
+        )
         conn.commit()
 
 
