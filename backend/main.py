@@ -74,10 +74,10 @@ def chat(request: Request, req: ChatRequest):
     # checked first so a bare "yes" confirming an active deep-dive is handled
     # here, before the general topic gate below ever sees it in isolation.
     active_project = memory.get_active_project(req.session_id)
-    route = project_agent.route_project_query(req.query, active_project)
+    route = agent.project_agent.route_project_query(req.query, active_project)
 
     if route["action"] == "overview":
-        answer_text, links = project_agent.answer_overview(route["project_key"], req.query)
+        answer_text, links = agent.project_agent.answer_overview(route["project_key"], req.query)
         full_reply = _append_links(answer_text, links)
         memory.save_turn(req.session_id, "user", req.query)
         memory.save_turn(req.session_id, "assistant", full_reply)
@@ -85,7 +85,7 @@ def chat(request: Request, req: ChatRequest):
         return StreamingResponse(_stream_text(full_reply), media_type="text/plain")
 
     if route["action"] == "deep_dive":
-        answer_text, links = project_agent.answer_deep_dive(route["project_key"], req.query)
+        answer_text, links = agent.project_agent.answer_deep_dive(route["project_key"], req.query)
         full_reply = _append_links(answer_text, links)
         memory.save_turn(req.session_id, "user", req.query)
         memory.save_turn(req.session_id, "assistant", full_reply)
