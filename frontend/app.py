@@ -81,6 +81,9 @@ def init_app_state():
         st.session_state.messages = []
     if "active_view" not in st.session_state:
         st.session_state.active_view = "chat"  # which of the two sections is showing
+    if "jd_result" not in st.session_state:
+        st.session_state.jd_result = None
+        st.session_state.jd_filename = None
 
 
 def stream_chat_response(query: str):
@@ -155,45 +158,57 @@ def render_jd_tab():
                 }
                 response = httpx.post(f"{BACKEND_URL}/match", files=files, timeout=60.0)
                 response.raise_for_status()
-                result = response.json()
+                # persist in session_state -- a plain local variable would be lost
+                # the moment the user switches views and comes back, since
+                # st.button() only evaluates True on the exact rerun it was
+                # clicked, not on every later rerun
+                st.session_state.jd_result = response.json()
+                st.session_state.jd_filename = uploaded.name
             except httpx.HTTPError as e:
                 st.error(f"Match request failed: {e}")
                 return
 
-        score = result.get("final_score") or 0
-        level, label = score_band(score)
+    result = st.session_state.jd_result
+    if not result:
+        return  # nothing checked yet this session
 
-        st.metric("Fit Score", f"{score}/100")
-        st.progress(min(max(score / 100, 0.0), 1.0))
-        getattr(st, level)(f"**{label}** — {result.get('final_verdict', '')}")
+    if st.session_state.jd_filename:
+        st.caption(f"Showing results for: {st.session_state.jd_filename}")
 
-        topic_verdicts = result.get("topic_verdicts", [])
-        if topic_verdicts:
-            st.markdown("**Field-by-field breakdown**")
-            for item in topic_verdicts:
-                st.markdown(f"- **{item.get('topic', '')}:** {item.get('verdict', '')}")
+    score = result.get("final_score") or 0
+    level, label = score_band(score)
 
-        transferable = result.get("transferable_skills", [])
-        if transferable:
-            st.markdown("**Transferable skills**")
-            st.caption("Skills the job asks for that don't appear by name, but have a genuine equivalent in the resume.")
-            for t in transferable:
-                st.markdown(
-                    f"- Job wants **{t.get('required', '')}** → resume has **{t.get('have_instead', '')}** "
-                    f"— {t.get('why_similar', '')}"
-                )
+    st.metric("Fit Score", f"{score}/100")
+    st.progress(min(max(score / 100, 0.0), 1.0))
+    getattr(st, level)(f"**{label}** — {result.get('final_verdict', '')}")
 
-        gaps = result.get("genuine_gaps", [])
-        if gaps:
-            st.markdown("**Genuine gaps**")
-            for gap in gaps:
-                st.markdown(f"- ❌ {gap}")
+    topic_verdicts = result.get("topic_verdicts", [])
+    if topic_verdicts:
+        st.markdown("**Field-by-field breakdown**")
+        for item in topic_verdicts:
+            st.markdown(f"- **{item.get('topic', '')}:** {item.get('verdict', '')}")
 
-        with st.expander("Score breakdown"):
-            st.caption(
-                f"Embedding similarity: {result.get('embedding_score')} | "
-                f"LLM assessment score: {result.get('llm_score')}"
+    transferable = result.get("transferable_skills", [])
+    if transferable:
+        st.markdown("**Transferable skills**")
+        st.caption("Skills the job asks for that don't appear by name, but have a genuine equivalent in the resume.")
+        for t in transferable:
+            st.markdown(
+                f"- Job wants **{t.get('required', '')}** → resume has **{t.get('have_instead', '')}** "
+                f"— {t.get('why_similar', '')}"
             )
+
+    gaps = result.get("genuine_gaps", [])
+    if gaps:
+        st.markdown("**Genuine gaps**")
+        for gap in gaps:
+            st.markdown(f"- ❌ {gap}")
+
+    with st.expander("Score breakdown"):
+        st.caption(
+            f"Embedding similarity: {result.get('embedding_score')} | "
+            f"LLM assessment score: {result.get('llm_score')}"
+        )
 
 
 # ---------------------------------------------------------------------------
