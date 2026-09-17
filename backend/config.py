@@ -2,7 +2,13 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-DATA_DIR = os.path.join(BASE_DIR, "data")
+BACKEND_DATA_DIR = os.path.join(BASE_DIR, "data")
+PROJECT_DATA_DIR = os.path.join(os.path.dirname(BASE_DIR), "Data")
+DATA_DIR = (
+    BACKEND_DATA_DIR
+    if os.path.isdir(BACKEND_DATA_DIR)
+    else PROJECT_DATA_DIR
+)
 INFO_TXT_PATH = os.path.join(DATA_DIR, "info.txt")
 RESUME_TXT_PATH = os.path.join(DATA_DIR, "resume.txt")
 
