@@ -4,9 +4,35 @@ import re
 
 import config
 import github_client
-from backend.client import complete, complete_with_tools
+from backend.client import client, complete
 
 logger = logging.getLogger(__name__)
+
+
+def complete_with_tools(
+    messages: list[dict],
+    tools: list[dict],
+    model: str = config.CHAT_MODEL,
+    temperature: float = 0.2,
+):
+    """Single non-streaming tool-calling round trip.
+
+    Used by the GitHub deep-dive loop (answer_deep_dive) to let the model
+    choose which repository file(s) to read via `tools`. Returns the raw
+    response message object -- not just its text -- since callers here need
+    `.tool_calls` and `.model_dump()` to keep the agent loop going, unlike
+    client.complete(), which every other caller in this codebase uses for a
+    plain text answer.
+    """
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        tools=tools,
+        temperature=temperature,
+        stream=False,
+    )
+    return response.choices[0].message
+
 
 READ_FILE_TOOL = {
     "type": "function",
