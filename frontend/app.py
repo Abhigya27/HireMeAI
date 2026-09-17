@@ -202,12 +202,17 @@ def render_jd_tab():
     if gaps:
         st.markdown("**Genuine gaps**")
         for gap in gaps:
-            st.markdown(f"- ❌ {gap}")
+            severity = gap.get("severity", "") if isinstance(gap, dict) else ""
+            gap_text = gap.get("gap", "") if isinstance(gap, dict) else gap
+            icon = "❌" if severity == "must-have" else "⚠️"
+            label = f"[{severity.replace('-', ' ').title()}] " if severity else ""
+            st.markdown(f"- {icon} {label}{gap_text}")
 
     with st.expander("Score breakdown"):
         st.caption(
-            f"Embedding similarity: {result.get('embedding_score')} | "
-            f"LLM assessment score: {result.get('llm_score')}"
+            f"LLM assessment score (drives the fit score above): {result.get('llm_score')} | "
+            f"Whole-document embedding similarity (reference only, not used in the score): "
+            f"{result.get('embedding_score')}"
         )
 
 
