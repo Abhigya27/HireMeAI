@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 
 import config
 import memory
-import project_agent
+import agent.project_agent
 from rag import get_index, retrieve, build_answer_prompt, is_relevant_query
 from client import stream_chat
 from ats import extract_text, score_match
