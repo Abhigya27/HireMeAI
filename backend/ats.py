@@ -1,14 +1,21 @@
 import io
 import json
-import re
 
 import numpy as np
 from pypdf import PdfReader
 from docx import Document
 
-import config
-from rag import embed_text
-from client import complete
+from backend import config
+from backend.rag import embed_text
+from backend.client import stream_chat
+
+
+# Sentinel the streaming HTTP response uses to mark where the free-flowing
+# analysis text ends and the final structured JSON result begins. The
+# Streamlit frontend (app.py) looks for this same literal string -- since
+# it's a separate process talking over HTTP, not a shared import, keep the
+# two in sync if you ever change it.
+RESULT_MARKER = "<<<JD_MATCH_RESULT>>>"
 
 
 def extract_text(filename: str, file_bytes: bytes) -> str:
@@ -25,7 +32,8 @@ def extract_text(filename: str, file_bytes: bytes) -> str:
         doc = Document(io.BytesIO(file_bytes))
         return "\n".join(p.text for p in doc.paragraphs)
 
-    raise ValueError(f"Unsupported file type: .{ext or 'unknown'}. Use txt, pdf, or docx.")
+    raise ValueError(
+        f"Unsupported file type: .{ext or 'unknown'}. Use txt, pdf, or docx.")
 
 
 def _load_resume_text() -> str:
@@ -44,8 +52,8 @@ def _embedding_similarity(resume_text: str, jd_text: str) -> float:
     return float(np.clip((cosine + 1) / 2 * 100, 0, 100))
 
 
-def _llm_field_comparison(resume_text: str, jd_text: str) -> dict:
-    prompt = f"""You are a supportive, realistic technical reviewer comparing a candidate's
+def _build_comparison_prompt(resume_text: str, jd_text: str) -> str:
+    return f"""You are a supportive, realistic technical reviewer comparing a candidate's
 resume against a job description. Give an honest but fair assessment -- not a maximally
 strict gatekeeping exercise. Most real candidates get hired despite not matching every
 line of a job posting; your scoring should reflect that reality, not punish normal gaps.
@@ -107,6 +115,10 @@ Do the following, in order:
    constructive, but never invent strengths or soften a real must-have gap to sound
    nicer.
 
+Keep the whole response tight enough to comfortably fit in one reply: cap genuine_gaps
+at 6 items and transferable_skills at 6 items, and keep every verdict/gap description to
+one clear sentence. Don't pad any field just to seem thorough.
+
 Respond with ONLY a JSON object (no markdown fences, no extra text) with exactly this shape:
 {{
   "topic_verdicts": [{{"topic": "...", "verdict": "..."}}],
@@ -116,40 +128,141 @@ Respond with ONLY a JSON object (no markdown fences, no extra text) with exactly
   "score": <integer 0-100>
 }}"""
 
-    raw = complete(prompt, temperature=0.3)
 
-    # be defensive: strip any markdown fences / stray text around the JSON object
-    match = re.search(r"\{.*\}", raw, re.DOTALL)
-    json_str = match.group(0) if match else raw
+def _extract_json_object(raw: str) -> str | None:
+    """Find the first top-level {...} object in raw text by tracking brace
+    depth (respecting quoted strings/escapes), rather than a greedy regex.
+    A greedy `\\{.*\\}` regex grabs from the FIRST '{' to the LAST '}' in the
+    whole string, which is wrong the moment the JSON contains nested
+    braces/quotes with any stray text around it, and it still "succeeds"
+    even when the object never actually closed. Depth-tracking gets the
+    real matching brace, and correctly returns None (not found) when the
+    object is genuinely unbalanced -- e.g. the response got cut off by
+    hitting max_tokens mid-generation.
+    """
+    start = raw.find("{")
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escape = False
+    for i in range(start, len(raw)):
+        ch = raw[i]
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return raw[start:i + 1]
+    return None  # unbalanced: the object never closed
+
+
+def _attempt_repair(raw: str, start: int) -> dict | None:
+    """Best-effort recovery for a JSON object that got cut off mid-generation
+    (the common case: the model hit max_tokens before finishing the object).
+    Closes any string left open, then appends closing brackets/braces for
+    whatever was still open, and tries to parse that -- salvaging whatever
+    fields did finish instead of discarding the whole analysis over a
+    truncated tail.
+    """
+    text = raw[start:]
+    in_string = False
+    escape = False
+    stack = []
+    for ch in text:
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch in "{[":
+            stack.append(ch)
+        elif ch in "}]":
+            if stack:
+                stack.pop()
+
+    repaired = text
+    if in_string:
+        repaired += '"'
+    closers = {"{": "}", "[": "]"}
+    while stack:
+        repaired += closers[stack.pop()]
 
     try:
-        return json.loads(json_str)
+        return json.loads(repaired)
     except json.JSONDecodeError:
+        return None
+
+
+def _parse_comparison_response(raw: str) -> dict:
+    obj_str = _extract_json_object(raw)
+    parsed = None
+    if obj_str is not None:
+        try:
+            parsed = json.loads(obj_str)
+        except json.JSONDecodeError:
+            parsed = None
+
+    if parsed is None:
+        # No balanced object was found, or what looked balanced still didn't
+        # parse -- almost always means generation was cut off before the
+        # object finished. Try to salvage whatever fields did complete.
+        start = raw.find("{")
+        if start != -1:
+            parsed = _attempt_repair(raw, start)
+
+    if parsed is None:
         return {
             "topic_verdicts": [],
             "transferable_skills": [],
             "genuine_gaps": [],
-            "final_verdict": "Could not parse the model's output. Raw response: " + raw[:500],
+            "final_verdict": None,
             "score": None,
+            "_parse_failed": True,
         }
 
+    parsed.setdefault("_parse_failed", False)
+    return parsed
 
-def score_match(jd_text: str) -> dict:
-    resume_text = _load_resume_text()
 
-    # kept only as a supplementary reference number -- see score_match's
-    # docstring-equivalent note below. It is NOT blended into final_score:
-    # raw whole-document cosine similarity between two same-domain
-    # professional texts is a noisy, barely-moving signal (any tech resume
-    # vs any tech JD tends to land in roughly the same 0.4-0.8 cosine band
-    # regardless of actual fit), so averaging it in was silently dragging
-    # every result toward the same ~70s score no matter what the LLM's
-    # actual field-by-field analysis found.
-    embedding_score = _embedding_similarity(resume_text, jd_text)
-    analysis = _llm_field_comparison(resume_text, jd_text)
+def _build_result(embedding_score: float, analysis: dict) -> dict:
+    if analysis.get("_parse_failed"):
+        # Don't quietly fall back to the embedding heuristic as a stand-in
+        # score here -- that produces a confident-looking number (backed by
+        # a signal that was explicitly never meant to drive the score on its
+        # own, see the comment in score_match_stream) alongside an empty or
+        # garbled verdict. Surface the failure explicitly so the caller can
+        # show a clear "try again" instead of a fake result.
+        return {
+            "final_score": None,
+            "embedding_score": round(embedding_score, 1),
+            "llm_score": None,
+            "topic_verdicts": [],
+            "transferable_skills": [],
+            "genuine_gaps": [],
+            "final_verdict": None,
+            "error": "Something went wrong analyzing this job description. Please try again.",
+        }
 
     llm_score = analysis.get("score")
-    final_score = llm_score if isinstance(llm_score, (int, float)) else round(embedding_score, 1)
+    final_score = llm_score if isinstance(
+        llm_score, (int, float)) else round(embedding_score, 1)
 
     return {
         "final_score": final_score,
@@ -160,3 +273,55 @@ def score_match(jd_text: str) -> dict:
         "genuine_gaps": analysis.get("genuine_gaps", []),
         "final_verdict": analysis.get("final_verdict"),
     }
+
+
+def score_match_stream(jd_text: str):
+    """Generator version of score_match: yields raw text chunks as the LLM's
+    comparison streams in (so /match can give live feedback instead of one
+    long blocking wait), then a final chunk -- prefixed with RESULT_MARKER --
+    carrying the fully parsed, structured result as JSON once the stream is
+    done. Callers should buffer chunks and split on RESULT_MARKER against the
+    accumulated buffer rather than assuming the marker lands in a single
+    chunk.
+
+    Uses config.MATCH_MODEL rather than config.CHAT_MODEL: this is a single
+    deep, one-shot structured-reasoning call (not a back-and-forth chat), so
+    it's worth spending a stronger/slower model on it, independent of
+    whatever model the conversational chatbot is tuned for.
+    """
+    resume_text = _load_resume_text()
+
+    # kept only as a supplementary reference number -- see _build_result.
+    # It is NOT blended into final_score: raw whole-document cosine
+    # similarity between two same-domain professional texts is a noisy,
+    # barely-moving signal (any tech resume vs any tech JD tends to land in
+    # roughly the same 0.4-0.8 cosine band regardless of actual fit), so
+    # averaging it in was silently dragging every result toward the same
+    # ~70s score no matter what the LLM's actual field-by-field analysis found.
+    embedding_score = _embedding_similarity(resume_text, jd_text)
+
+    prompt = _build_comparison_prompt(resume_text, jd_text)
+
+    full_text = ""
+    for chunk in stream_chat(
+        prompt, model=config.MATCH_MODEL, temperature=0.3,
+        max_tokens=config.MATCH_MAX_TOKENS,
+    ):
+        full_text += chunk
+        yield chunk
+
+    analysis = _parse_comparison_response(full_text)
+    result = _build_result(embedding_score, analysis)
+    yield RESULT_MARKER + json.dumps(result)
+
+
+def score_match(jd_text: str) -> dict:
+    """Non-streaming convenience wrapper around score_match_stream, for any
+    caller that just wants the final structured result (e.g. tests, or a
+    non-HTTP script) without handling the streaming protocol itself.
+    """
+    result = None
+    for chunk in score_match_stream(jd_text):
+        if chunk.startswith(RESULT_MARKER):
+            result = json.loads(chunk[len(RESULT_MARKER):])
+    return result
