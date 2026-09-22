@@ -24,8 +24,8 @@ RESUME_PATH = os.path.join(os.path.dirname(
 
 # ---- Edit these with your real links ----
 SOCIAL_LINKS = {
-    "GitHub": ("💻", "https://github.com/your-username"),
-    "LinkedIn": ("🔗", "https://linkedin.com/in/your-profile"),
+    "GitHub": ("💻", "https://github.com/Abhigya27"),
+    "LinkedIn": ("🔗", "www.linkedin.com/in/abhigya-narain-11643b2b5"),
     "X": ("🐤", "https://x.com/AbhigyaNarain"),
     "LeetCode": ("👨‍💻", "https://leetcode.com/u/abhigya_27/"),
 }
