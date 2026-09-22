@@ -107,8 +107,7 @@ cp backend/.env.example backend/.env
 
 **Terminal 1 — backend:**
 ```bash
-cd backend
-uvicorn main:app --reload
+uvicorn backend.main:app --reload
 ```
 
 **Terminal 2 — frontend:**
