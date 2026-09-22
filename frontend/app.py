@@ -1,3 +1,4 @@
+import json
 import os
 import uuid
 
@@ -6,6 +7,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
+
 
 def _get_backend_url() -> str:
     # Streamlit Community Cloud injects secrets via st.secrets, not plain env vars.
@@ -17,6 +19,8 @@ def _get_backend_url() -> str:
 
 
 BACKEND_URL = _get_backend_url()
+RESUME_PATH = os.path.join(os.path.dirname(
+    os.path.dirname(__file__)), "Data", "abhigya.pdf")
 
 # ---- Edit these with your real links ----
 SOCIAL_LINKS = {
@@ -36,6 +40,18 @@ def render_sidebar():
     with st.sidebar:
         st.title("Abhigya Narain")
         st.caption("AI Engineer")  # edit as needed
+        if os.path.exists(RESUME_PATH):
+            with open(RESUME_PATH, "rb") as resume_file:
+                resume_data = resume_file.read()
+            st.download_button(
+                "Download Resume",
+                data=resume_data,
+                file_name="abhigya.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
+        else:
+            st.caption("Resume unavailable")
         st.divider()
         st.subheader("Email : narainabhigya27@gmail.com")
         st.subheader("Connect")
@@ -140,33 +156,79 @@ def score_band(score: float):
         return "error", "Weak fit"
 
 
+# must match backend/ats.py's RESULT_MARKER -- the two apps are separate
+# processes talking over HTTP, so this is a small wire-format contract
+# rather than a shared import.
+JD_RESULT_MARKER = "<<<JD_MATCH_RESULT>>>"
+
+
 def render_jd_tab():
     st.subheader("Job Description Matcher")
-    st.write("Upload a job description and see a field-by-field comparison against Abhigya's resume.")
+    st.write(
+        "Upload a job description and see a field-by-field comparison against Abhigya's resume.")
 
-    uploaded = st.file_uploader("Upload job description", type=["txt", "pdf", "docx"])
+    uploaded = st.file_uploader(
+        "Upload job description", type=["txt", "pdf", "docx"])
 
     if uploaded and st.button("Check fit", type="primary"):
-        with st.spinner("Comparing resume against the job description..."):
-            try:
-                files = {
-                    "file": (
-                        uploaded.name,
-                        uploaded.getvalue(),
-                        uploaded.type or "application/octet-stream",
-                    )
-                }
-                response = httpx.post(f"{BACKEND_URL}/match", files=files, timeout=60.0)
+        status = st.status(
+            "Comparing resume against the job description...", expanded=True)
+        preview_box = status.empty()
+        buffer = ""
+        result = None
+        try:
+            files = {
+                "file": (
+                    uploaded.name,
+                    uploaded.getvalue(),
+                    uploaded.type or "application/octet-stream",
+                )
+            }
+            with httpx.stream("POST", f"{BACKEND_URL}/match", files=files, timeout=120.0) as response:
                 response.raise_for_status()
-                # persist in session_state -- a plain local variable would be lost
-                # the moment the user switches views and comes back, since
-                # st.button() only evaluates True on the exact rerun it was
-                # clicked, not on every later rerun
-                st.session_state.jd_result = response.json()
-                st.session_state.jd_filename = uploaded.name
-            except httpx.HTTPError as e:
-                st.error(f"Match request failed: {e}")
-                return
+                for chunk in response.iter_text():
+                    if not chunk:
+                        continue
+                    buffer += chunk
+                    if JD_RESULT_MARKER in buffer:
+                        raw_part, _, result_part = buffer.partition(
+                            JD_RESULT_MARKER)
+                        result = json.loads(result_part)
+                        buffer = raw_part
+                        break
+                    preview_box.code(buffer, language="json")
+        except httpx.HTTPError as e:
+            status.update(label="Match request failed", state="error")
+            st.error(f"Match request failed: {e}")
+            return
+        except json.JSONDecodeError:
+            status.update(label="Couldn't parse the result", state="error")
+            st.error(
+                "Something went wrong parsing the match result — please try again.")
+            return
+
+        if result is None:
+            status.update(label="No result received", state="error")
+            st.error("Didn't receive a complete result — please try again.")
+            return
+
+        if result.get("error"):
+            # The backend couldn't recover a usable analysis from the model's
+            # response (e.g. it got cut off mid-generation). Show that
+            # plainly rather than a score quietly built from an unrelated
+            # fallback signal -- and don't overwrite any previous good result.
+            status.update(label="Analysis failed", state="error")
+            st.error(result["error"])
+            return
+
+        status.update(label="Analysis complete",
+                      state="complete", expanded=False)
+        # persist in session_state -- a plain local variable would be lost
+        # the moment the user switches views and comes back, since
+        # st.button() only evaluates True on the exact rerun it was
+        # clicked, not on every later rerun
+        st.session_state.jd_result = result
+        st.session_state.jd_filename = uploaded.name
 
     result = st.session_state.jd_result
     if not result:
@@ -186,12 +248,14 @@ def render_jd_tab():
     if topic_verdicts:
         st.markdown("**Field-by-field breakdown**")
         for item in topic_verdicts:
-            st.markdown(f"- **{item.get('topic', '')}:** {item.get('verdict', '')}")
+            st.markdown(
+                f"- **{item.get('topic', '')}:** {item.get('verdict', '')}")
 
     transferable = result.get("transferable_skills", [])
     if transferable:
         st.markdown("**Transferable skills**")
-        st.caption("Skills the job asks for that don't appear by name, but have a genuine equivalent in the resume.")
+        st.caption(
+            "Skills the job asks for that don't appear by name, but have a genuine equivalent in the resume.")
         for t in transferable:
             st.markdown(
                 f"- Job wants **{t.get('required', '')}** → resume has **{t.get('have_instead', '')}** "
@@ -248,12 +312,14 @@ def main():
 
             with st.chat_message("assistant"):
                 try:
-                    full_response = st.write_stream(stream_chat_response(query))
+                    full_response = st.write_stream(
+                        stream_chat_response(query))
                 except httpx.HTTPError as e:
                     full_response = f"Sorry, something went wrong talking to the backend: {e}"
                     st.error(full_response)
 
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
+        st.session_state.messages.append(
+            {"role": "assistant", "content": full_response})
 
 
 if __name__ == "__main__":
