@@ -1,160 +1,720 @@
-# Ask Abhigya 🤖
+# HireMeAI 🤖
 
-A personal AI chatbot + job-fit matcher, built as an interactive resume/portfolio site.
+> An AI-powered portfolio assistant that lets recruiters, interviewers, and visitors **chat with a candidate's profile, explore projects, and evaluate a resume against a job description**.
 
-Two tools in one app:
-
-1. **💬 Conversational RAG Chatbot** — ask questions about Abhigya's background, skills, and projects. History-aware: follow-ups like *"tell me about the second last one"* are correctly resolved against the prior conversation before retrieval runs.
-2. **📄 Job Description Matcher** — upload a job description (`.txt` / `.pdf` / `.docx`) and get a fit score, verdict, and skill-gap breakdown against Abhigya's resume.
-
-Built with **plain Python** — no LangChain, no heavy ML frameworks. Chunking, retrieval, and conversation memory are all hand-rolled in a few hundred lines.
+<p align="center">
+  <a href="https://hiremeai-production-408a.up.railway.app/docs">Backend API / Swagger Docs</a>
+  •
+  <a href="https://hiremeai-production-408a.up.railway.app">Backend</a>
+  •
+  <a href="https://github.com/Abhigya27/HireMeAI">GitHub Repository</a>
+</p>
 
 ---
 
-## Architecture
+## 🚀 What is HireMeAI?
 
+HireMeAI is a personal AI hiring/portfolio assistant built around two main experiences:
+
+### 💬 1. Conversational Portfolio Assistant
+
+Visitors can ask questions about the candidate's:
+
+- background
+- technical skills
+- experience
+- projects
+- education
+- technologies used
+- project architecture and implementation
+
+The assistant uses **history-aware Retrieval-Augmented Generation (RAG)** so follow-up questions can refer to previous messages naturally.
+
+For example:
+
+> **User:** What projects have you built?
+
+> **Assistant:** ...lists the projects.
+
+> **User:** Tell me more about the second one.
+
+The backend first rewrites the follow-up into a standalone query using the conversation history, then performs retrieval against the knowledge base.
+
+### 📄 2. Job Description Matcher
+
+A recruiter can upload a job description in:
+
+- `.txt`
+- `.pdf`
+- `.docx`
+
+HireMeAI extracts the job description, compares it with the candidate's resume, and produces a structured analysis containing:
+
+- topic-by-topic verdicts
+- transferable/equivalent skills
+- genuine skill gaps
+- gap severity
+- overall fit verdict
+- a `0–100` fit score
+
+The matcher intentionally distinguishes **must-have requirements** from **nice-to-have requirements** instead of treating every line of a job posting as equally important.
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart TB
+    U[User / Recruiter]
+
+    FE[Streamlit Frontend]
+
+    API[FastAPI Backend]
+
+    RAG[RAG Pipeline]
+    MEM[SQLite Conversation Memory]
+    AGENT[GitHub Project Agent]
+    ATS[JD Matcher]
+
+    EMB[FastEmbed<br/>BAAI/bge-small-en-v1.5]
+    FAISS[FAISS Vector Index]
+    DATA[Candidate Knowledge Base<br/>Data/info.txt + resume.txt]
+
+    GROQ[Groq API]
+    CHAT[Qwen 3.8 27B]
+    MATCH[GPT-OSS 120B]
+
+    GH[GitHub Contents API]
+    REPOS[Public GitHub Repositories]
+
+    UPLOAD[TXT / PDF / DOCX]
+
+    U --> FE
+    FE -->|HTTP / Streaming| API
+
+    API --> RAG
+    API --> MEM
+    API --> AGENT
+    API --> ATS
+
+    DATA --> EMB
+    EMB --> FAISS
+    RAG --> FAISS
+    RAG --> GROQ
+    GROQ --> CHAT
+
+    AGENT --> GROQ
+    AGENT --> GH
+    GH --> REPOS
+
+    UPLOAD --> ATS
+    ATS --> EMB
+    ATS --> GROQ
+    GROQ --> MATCH
+
+    MEM --> API
 ```
-   STREAMLIT                          FASTAPI
- frontend/app.py    ──── HTTP ────▶  backend/main.py
-                                          │
-                       ┌──────────────────┼──────────────────┐
-                       ▼                  ▼                  ▼
-                    rag.py            memory.py         job_matcher.py
-                 (FAISS +            (SQLite +          (pypdf / docx +
-                fastembed)         query condensing)    hybrid scoring)
-                       │                  │                  │
-                       └──────────────────┼──────────────────┘
-                                          ▼
-                                       Groq API
-                                (openai/gpt-oss-120b)
+
+### High-level design
+
+The application is split into two independently running layers:
+
+**Frontend**
+- Streamlit
+- User interface
+- Chat experience
+- JD file upload
+- Streaming responses
+- Resume download and social/profile links
+
+**Backend**
+- FastAPI
+- RAG pipeline
+- LLM interaction
+- Conversation memory
+- GitHub project research agent
+- JD extraction and matching
+- Rate limiting
+- API endpoints
+
+The frontend communicates with the backend over HTTP, keeping UI and application logic separated.
+
+---
+
+# 🧠 Core AI Architecture
+
+## 1. Retrieval-Augmented Generation
+
+The candidate profile is stored as text in the `Data/` directory.
+
+The RAG pipeline uses:
+
+- **FastEmbed**
+- **BAAI/bge-small-en-v1.5**
+- **384-dimensional embeddings**
+- **FAISS**
+- cosine-style semantic retrieval through vector representations / nearest-neighbour search
+- Groq-hosted LLM generation
+
+The source text is split using a structure-aware chunking strategy:
+
+1. Split on paragraph boundaries.
+2. Keep complete paragraphs when they fit.
+3. Split larger paragraphs on sentence boundaries.
+4. Apply a small overlap between chunks.
+
+This preserves project descriptions and other coherent sections instead of blindly cutting text at fixed character offsets.
+
+The resulting embeddings are stored in a local FAISS index.
+
+### Automatic index refresh
+
+The system stores a SHA-256 fingerprint of `Data/info.txt`.
+
+When the source changes, HireMeAI detects the fingerprint mismatch and rebuilds the FAISS index automatically. This prevents stale retrieval results after profile/project information is updated.
+
+The FastAPI application also warms the embedding model and FAISS index during startup so the first user request does not have to perform the entire initialization path.
+
+---
+
+## 2. History-Aware Chat
+
+Conversation state is stored in **SQLite**.
+
+Two pieces of information are persisted:
+
+```text
+turns
+├── session_id
+├── role
+├── content
+└── created_at
+
+session_state
+├── session_id
+└── active_project
 ```
 
-- Frontend and backend are **two separate processes** talking over plain HTTP — no shared imports or state.
-- **No vector DB service** — FAISS runs in-process, index persisted to disk as a flat file.
-- **No memory framework** — a plain SQLite table plus one extra LLM call ("query condensation") gives history-awareness without something like LangChain's `ConversationBufferMemory`.
+The active-project state is particularly useful for project conversations.
 
-## Tech stack
+Example:
 
-| Layer | Tools |
+```text
+User: Tell me about HireMeAI.
+Assistant: ...
+
+User: Yes, go deeper.
+```
+
+Instead of treating `"Yes, go deeper"` as an unrelated search query, the system can use the active project stored in SQLite to route it as a continuation of the HireMeAI discussion.
+
+The system also uses an LLM-powered query condensation step to turn contextual follow-ups into standalone retrieval queries.
+
+---
+
+# 🧑‍💻 GitHub Project Agent
+
+HireMeAI goes beyond a static resume chatbot.
+
+When a visitor asks for implementation-level information about a project, the backend can switch to a **GitHub project research agent**.
+
+Examples:
+
+```text
+How does the HireMeAI backend work?
+Explain the architecture of HireMeAI.
+How is authentication implemented?
+How does the RAG pipeline work?
+What does the backend/main.py file do?
+How is the project deployed?
+```
+
+The agent:
+
+1. Identifies the configured project.
+2. Uses the GitHub project registry to resolve the repository.
+3. Retrieves the repository file tree.
+4. Uses an LLM tool-calling loop to decide which source files are relevant.
+5. Reads those files through the GitHub Contents API.
+6. Synthesizes an answer from the code it actually inspected.
+7. Returns the answer together with GitHub source links.
+
+This makes technical project explanations **grounded in the repository implementation**, instead of relying only on a manually written project summary.
+
+The agent also has a configurable maximum number of research rounds and a per-file character cap to keep tool-driven investigation bounded.
+
+---
+
+# 📄 Job Description Matching Pipeline
+
+The `/match` API accepts a job description upload.
+
+Supported formats:
+
+```text
+.txt
+.pdf
+.docx
+```
+
+### Extraction layer
+
+- TXT → UTF-8 decoding
+- PDF → `pypdf`
+- DOCX → `python-docx`
+
+### Matching pipeline
+
+```text
+Job Description
+      │
+      ▼
+File Text Extraction
+      │
+      ▼
+Resume + JD
+      │
+      ├──────────────► Embedding Similarity Baseline
+      │
+      ▼
+LLM Comparison
+      │
+      ├── Must-have requirements
+      ├── Nice-to-have requirements
+      ├── Topic verdicts
+      ├── Transferable skills
+      ├── Genuine gaps
+      ├── Final verdict
+      └── Fit score
+```
+
+The system also uses an embedding-based similarity calculation as part of the matching workflow, while the final structured assessment is generated by the dedicated matching LLM.
+
+The result is returned as structured JSON using a small streaming wire-format marker between the backend and Streamlit frontend.
+
+---
+
+# ⚡ Streaming Responses
+
+LLM responses are streamed instead of waiting for the complete generation.
+
+The backend uses FastAPI's `StreamingResponse`, while the frontend consumes the response incrementally.
+
+This is used for:
+
+- normal portfolio chat
+- GitHub project overviews
+- GitHub deep dives
+- JD matching analysis
+
+This makes the application feel much more responsive during generation.
+
+---
+
+# 🧰 Tech Stack
+
+## Frontend
+
+| Technology | Purpose |
 |---|---|
-| Frontend | Streamlit, httpx |
-| Backend | FastAPI, Uvicorn |
-| Embeddings | fastembed (`BAAI/bge-small-en-v1.5` — ONNX runtime, no PyTorch/`sentence-transformers`) |
-| Vector search | FAISS (`IndexFlatL2`) |
-| LLM | Groq API (`openai/gpt-oss-120b`) |
-| History storage | SQLite |
-| File parsing | pypdf, python-docx |
+| **Streamlit** | Interactive web UI |
+| **HTTPX** | Backend HTTP communication |
+| **python-dotenv** | Environment configuration |
 
-## Project structure
+## Backend
 
-```
-ask-abhigya/
-├── backend/
-│   ├── main.py           # FastAPI app: /chat, /chat/clear, /match, /health
-│   ├── rag.py             # embedding, chunking, FAISS index, retrieval, answer prompt
-│   ├── memory.py          # SQLite session history + history-aware query condensation
-│   ├── job_matcher.py     # file parsing (txt/pdf/docx) + resume-vs-JD scoring
-│   ├── groq_client.py     # shared Groq client (streaming + non-streaming)
-│   ├── config.py          # paths & constants
-│   ├── requirements.txt
-│   ├── .env.example
-│   └── data/
-│       ├── info.txt       # RAG source document (chunked + embedded)
-│       └── resume.txt     # full resume/skills summary (used whole, for JD matching)
-├── frontend/
-│   ├── app.py             # sidebar + Chat tab + JD Matcher tab
-│   ├── requirements.txt
-│   └── .env.example
-├── DEPLOY.md              # Render + Streamlit Community Cloud deployment guide
-└── .gitignore
-```
+| Technology | Purpose |
+|---|---|
+| **FastAPI** | REST API and application server |
+| **Pydantic** | Request validation |
+| **SlowAPI** | Per-IP rate limiting |
+| **SQLite** | Conversation/session persistence |
+| **HTTPX** | External API requests |
 
-## How the RAG pipeline works
+## AI / RAG
 
-1. **Chunking** — `info.txt` is split into fixed-size word chunks (`chunk_text()`).
-2. **Embedding** — each chunk is embedded with `fastembed` (384-dim vectors) and stored in a FAISS `IndexFlatL2`, persisted under `faiss_store/`.
-3. **On every chat message:**
-   - `condense_query()` rewrites follow-ups ("what about him?", "the second last one") into standalone questions using recent turns from SQLite — this is what makes retrieval history-aware. It explicitly asks the model to count list items before resolving ordinal references, since that's the failure mode most likely to trip up a plain LLM call.
-   - The standalone query is embedded and used to search FAISS for the top-k relevant chunks.
-   - Retrieved chunks + recent conversation history are assembled into one prompt (`build_answer_prompt()`) with strict grounding rules: no speculation, no hedged guesses, no attributing general skills to a specific project unless the context says so.
-   - The prompt streams to Groq; tokens stream straight through to the frontend.
-4. Both the user's question and the assistant's full reply are saved back to SQLite for the next turn.
+| Technology | Purpose |
+|---|---|
+| **Groq API** | LLM inference |
+| **Qwen 3.8 27B** | Main conversational / routing / project-agent model |
+| **GPT-OSS 120B** | Job description matching |
+| **FastEmbed** | Local embedding generation |
+| **BAAI/bge-small-en-v1.5** | Embedding model |
+| **FAISS** | Vector similarity search |
+| **NumPy** | Vector operations |
 
-## Job Description Matcher
+## Document Processing
 
-1. The uploaded file is parsed to plain text (`extract_text()` — routes by extension to `pypdf` or `python-docx`).
-2. **Hybrid scoring:**
-   - *Embedding similarity* — cosine similarity between resume and JD embeddings, rescaled to 0–100.
-   - *LLM verdict* — a structured JSON response (score, verdict, matching skills, missing skills, reasoning) from Groq.
-   - The final score averages the two, so it isn't relying on a single, un-sanity-checked signal.
+| Technology | Purpose |
+|---|---|
+| **pypdf** | PDF text extraction |
+| **python-docx** | DOCX text extraction |
+
+## External Integration
+
+| Technology | Purpose |
+|---|---|
+| **GitHub Contents API** | Repository README, file, and tree retrieval |
+
+## Deployment
+
+The deployed backend is currently hosted on **Railway**.
 
 ---
 
-## Getting started (local)
+# 📂 Project Structure
+
+```text
+HireMeAI/
+│
+├── backend/
+│   ├── faiss_store/
+│   │   ├── index.faiss
+│   │   ├── chunk_mapping.pkl
+│   │   └── info_source.sha256
+│   │
+│   ├── ats.py
+│   ├── client.py
+│   ├── config.py
+│   ├── github_client.py
+│   ├── main.py
+│   ├── memory.py
+│   ├── project_agent.py
+│   ├── rag.py
+│   ├── memory.db
+│   └── requirements.txt
+│
+├── Data/
+│   ├── abhigya.pdf
+│   ├── info.txt
+│   └── resume.txt
+│
+├── frontend/
+│   ├── app.py
+│   └── requirements.txt
+│
+├── .env
+├── .gitignore
+├── .python-version
+├── pyproject.toml
+└── README.md
+```
+
+### Important files
+
+**`backend/main.py`**  
+FastAPI application, endpoints, request validation, streaming, rate limiting, and routing between RAG, project-agent, and ATS workflows.
+
+**`backend/rag.py`**  
+Embedding, chunking, FAISS index creation/loading, retrieval, relevance gating, and answer-prompt construction.
+
+**`backend/memory.py`**  
+SQLite-backed conversation history, active project state, and follow-up query condensation.
+
+**`backend/project_agent.py`**  
+Project routing, GitHub repository selection, tool-calling research loop, and technical project answers.
+
+**`backend/github_client.py`**  
+GitHub API integration for README retrieval, file retrieval, repository tree inspection, and source URLs.
+
+**`backend/ats.py`**  
+Job description extraction, embedding similarity, structured comparison prompting, JSON extraction/repair, and streaming match results.
+
+**`backend/client.py`**  
+Low-level Groq client wrapper supporting normal completions, streaming completions, and tool-calling workflows.
+
+**`backend/config.py`**  
+Central configuration for model names, embedding settings, chunking, token limits, repository registry, and request limits.
+
+**`frontend/app.py`**  
+Streamlit interface, chat UI, streaming display, JD upload flow, resume download, and profile links.
+
+---
+
+# 🔌 API Endpoints
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `POST` | `/chat` | History-aware portfolio chat |
+| `POST` | `/chat/clear` | Clear a session's conversation |
+| `POST` | `/match` | Upload and evaluate a job description |
+| `GET` | `/health` | Health check |
+| `GET` | `/docs` | Interactive Swagger/OpenAPI documentation |
+
+### Example `/chat` request
+
+```json
+{
+  "session_id": "unique-session-id",
+  "query": "How does your RAG pipeline work?"
+}
+```
+
+The response is streamed incrementally.
+
+---
+
+# 🔐 Rate Limiting & Request Controls
+
+HireMeAI includes server-side protection using SlowAPI.
+
+Current limits are configured separately for chat and job matching:
+
+```text
+Chat
+15 requests / minute
+100 requests / hour
+
+JD Matching
+5 requests / minute
+20 requests / hour
+```
+
+Additional request controls include:
+
+- maximum chat query length
+- maximum upload size
+- file-type validation
+- empty-document validation
+- bounded GitHub agent research rounds
+- bounded file content sent to the agent
+
+This is particularly useful for a public portfolio application where expensive LLM operations should not be left completely unrestricted.
+
+---
+
+# 🔄 Request Flow
+
+## Chat
+
+```text
+Streamlit
+   │
+   ▼
+POST /chat
+   │
+   ├── Project query?
+   │      ├── Overview → project profile / README
+   │      └── Deep dive → GitHub file research agent
+   │
+   └── Normal profile query
+          │
+          ▼
+      Condense follow-up
+          │
+          ▼
+      Embed query
+          │
+          ▼
+      FAISS retrieval
+          │
+          ▼
+      Build context + history
+          │
+          ▼
+      Groq / Qwen
+          │
+          ▼
+      StreamingResponse
+          │
+          ▼
+      Streamlit chat UI
+```
+
+## Job Description Matching
+
+```text
+Streamlit upload
+      │
+      ▼
+POST /match
+      │
+      ▼
+Extract TXT / PDF / DOCX
+      │
+      ▼
+Load resume text
+      │
+      ▼
+Embedding similarity
+      │
+      ▼
+Matching LLM
+      │
+      ▼
+Structured JSON
+      │
+      ▼
+Streamlit result UI
+```
+
+---
+
+# 🧪 Design Decisions
+
+### Why FAISS?
+
+The project is designed as a lightweight personal portfolio application, so a local vector index is sufficient. FAISS avoids the operational overhead of running a separate hosted vector database.
+
+### Why SQLite?
+
+Conversation memory is small and session-oriented. SQLite provides persistent storage without requiring a separate database server.
+
+### Why direct Groq API calls?
+
+The application intentionally keeps the AI layer lightweight and explicit. It uses direct Groq SDK calls for streaming, completion, and tool calling instead of introducing an additional orchestration framework.
+
+### Why a separate GitHub agent?
+
+Resume/profile RAG and source-code exploration are different retrieval problems.
+
+- Resume RAG answers questions from curated profile information.
+- The GitHub agent answers implementation questions from the actual repository.
+
+Separating the two keeps each path targeted and makes project deep-dives more trustworthy.
+
+---
+
+# 🌐 Live Links
+
+### Application / API
+
+**Swagger Docs:**  
+https://hiremeai-production-408a.up.railway.app/docs
+
+**Backend:**  
+https://hiremeai-production-408a.up.railway.app
+
+### Source Code
+
+**GitHub:**  
+https://github.com/Abhigya27/HireMeAI
+
+---
+
+# ⚙️ Environment Variables
+
+The backend expects environment configuration through `.env` / environment variables.
+
+A typical deployment requires:
+
+```env
+GROQ_API_KEY=your_groq_api_key
+GITHUB_TOKEN=optional_github_token
+```
+
+`GITHUB_TOKEN` is optional for public repositories. An authenticated GitHub token can increase the API rate limit.
+
+Never commit real API keys or tokens to the repository.
+
+---
+
+# ▶️ Local Development
+
+## 1. Clone
 
 ```bash
-git clone <your-repo-url>
-cd ask-abhigya
-python3 -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\Activate.ps1
-
-pip install -r backend/requirements.txt
-pip install -r frontend/requirements.txt
-
-cp backend/.env.example backend/.env
-# edit backend/.env and add your GROQ_API_KEY
+git clone https://github.com/Abhigya27/HireMeAI.git
+cd HireMeAI
 ```
 
-**Terminal 1 — backend:**
+## 2. Configure environment
+
+Create `.env`:
+
+```env
+GROQ_API_KEY=your_groq_api_key
+GITHUB_TOKEN=your_optional_github_token
+```
+
+## 3. Start the backend
+
+From the project root:
+
 ```bash
 uvicorn backend.main:app --reload
 ```
 
-**Terminal 2 — frontend:**
-```bash
-cd frontend
-streamlit run app.py
+The API will be available at:
+
+```text
+http://127.0.0.1:8000
 ```
 
-Frontend opens at `http://localhost:8501`, talking to the backend at `http://127.0.0.1:8000`.
+Swagger:
 
-> Before running, drop your real content into `backend/data/info.txt` and `backend/data/resume.txt` — both ship as placeholders.
+```text
+http://127.0.0.1:8000/docs
+```
 
-## Environment variables
+## 4. Start the frontend
 
-| Variable | Where | Description |
-|---|---|---|
-| `GROQ_API_KEY` | `backend/.env` | Your [Groq API key](https://console.groq.com) |
-| `BACKEND_URL` | `frontend/.env` (local) or Streamlit Cloud **Secrets** (deployed) | URL of the FastAPI backend |
+```bash
+streamlit run frontend/app.py
+```
 
-## API reference
+Make sure the frontend's backend URL points to the running FastAPI server.
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/chat` | POST | `{session_id, query}` → streamed plain-text answer |
-| `/chat/clear` | POST | `?session_id=...` → clears that session's history |
-| `/match` | POST | multipart file upload → JSON fit score + verdict |
-| `/health` | GET | `{"status": "ok"}` liveness check |
+---
 
-Interactive docs available at `/docs` once the backend is running.
+# 📌 Current Project Characteristics
 
-## Deployment
+HireMeAI is designed as a **portfolio-first AI application**, rather than a generic chatbot.
 
-See [`DEPLOY.md`](./DEPLOY.md) for the full walkthrough — backend on Render, frontend on Streamlit Community Cloud, both on free tiers.
+Its main engineering characteristics are:
 
-## Known limitations
+- FastAPI + Streamlit separation
+- Retrieval-Augmented Generation
+- local FAISS vector search
+- local embedding generation with FastEmbed
+- history-aware conversation
+- persistent SQLite memory
+- LLM-powered query condensation
+- GitHub repository inspection through tool calling
+- streaming LLM responses
+- structured job-description matching
+- PDF / DOCX / TXT ingestion
+- API rate limiting
+- automatic FAISS cache invalidation using source fingerprints
+- deployment-ready environment configuration
 
-- Fixed-size word chunking (no paragraph/semantic-aware splitting) can occasionally split one project's description across two chunks.
-- SQLite chat history is per-process — on Render's free tier it resets whenever the service spins down from inactivity (by design, not a bug — matches the "reset on restart" behavior chosen for this project).
-- PDF extraction (`pypdf`) doesn't OCR — scanned/image-only PDFs won't yield extractable text.
+---
 
-## Connect
+## 📈 Possible Future Enhancements
 
-- ✉️ [Email](mailto:your_email@example.com)
-- 💻 [GitHub](https://github.com/your-username)
-- 🔗 [LinkedIn](https://linkedin.com/in/your-profile)
-- 📸 [Instagram](https://instagram.com/your-handle)
+Potential next steps include:
 
-## License
+- authentication and user accounts
+- PostgreSQL for production persistence
+- Redis-backed distributed rate limiting
+- background indexing jobs
+- stronger observability / tracing
+- automated evaluation datasets for RAG quality
+- recruiter-specific analytics
+- multi-resume support
+- semantic skill taxonomy / normalization
+- containerized deployment
+- CI/CD with automated tests
 
-The code in this repo is free to fork and adapt for your own portfolio. The contents of `backend/data/` are personal information — please don't reuse that verbatim.
+---
+
+## 👨‍💻 Author
+
+**Abhigya Narain**
+
+AI Engineer / Software Engineering Candidate
+
+- GitHub: https://github.com/Abhigya27
+- LinkedIn: www.linkedin.com/in/abhigya-narain-11643b2b5
+- X: https://x.com/AbhigyaNarain
+- LeetCode: https://leetcode.com/u/abhigya_27/
+
+---
+
+## ⭐ Why HireMeAI?
+
+HireMeAI combines several practical AI engineering patterns into one deployable application:
+
+> **RAG + conversational memory + LLM routing + tool calling + GitHub code research + document processing + structured LLM output + streaming + API protection**
+
+Rather than presenting a static portfolio page, it turns the portfolio itself into an interactive AI system.
