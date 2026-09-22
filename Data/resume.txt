@@ -1,0 +1,30 @@
+NAME: Abhigya Narain
+ROLE TARGET: AI/ML Engineer, Python Full-Stack Developer, Backend Developer
+
+TECHNICAL SKILLS:
+Languages - Python, SQL
+Foundational - DSA, Computer Networks, OOP, OS, DBMS/RDBMS, Machine Learning, LLMs, Git, GitHub
+Libraries - NumPy, Pandas, Matplotlib, Seaborn, Scikit-learn
+Frameworks - FastAPI, Streamlit, LangChain, LangGraph
+Databases - MySQL, PostgreSQL, SQLite, SQLAlchemy (ORM); FAISS, ChromaDB, DataStax AstraDB, Qdrant (vector databases)
+Additional - Docker, containers, images, deployment, CI/CD pipelines
+
+EXPERIENCE:
+Fresher -- no full-time work experience yet; actively building and shipping end-to-end AI and backend projects (below).
+
+PROJECTS:
+
+MediaShare
+An end-to-end, Instagram-style media sharing application built to practice backend engineering beyond basic CRUD. Implements OAuth2-based authentication and Pydantic data validation, with ImageKit for media storage and delivery.
+Tech: Python, FastAPI, SQLite, Pydantic, Streamlit, ImageKit, OAuth2
+
+HireMeAI
+A personal AI chatbot and resume/job-description matching tool. Answers questions about my background through a RAG-based chat interface, and separately scores how well a job description matches my resume using an LLM-based field-by-field comparison alongside an embedding similarity check. Includes a GitHub-reading agent that answers implementation-level questions about my other projects by reading their repositories directly. Built in raw Python without LangChain; includes per-IP rate limiting, upload size limits, and prompt-injection-resistant prompt design.
+Tech: FastAPI, Streamlit, SQLite, FAISS, Groq-hosted LLM
+
+YouTube RAG Converter
+Stores the transcript of an entire YouTube playlist or video into a vector database and answers questions about its content, with multilingual support.
+Tech: Python, vector database, LLM
+
+EDUCATION:
+B.Tech, Mechanical Engineering -- Vellore Institute of Technology (VIT), Vellore -- 2026, CGPA: 7.8
