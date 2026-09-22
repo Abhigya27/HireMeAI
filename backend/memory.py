@@ -2,8 +2,8 @@ import re
 import sqlite3
 from contextlib import contextmanager
 
-import config
-from client import complete
+from backend import config
+from backend.client import complete
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS turns (
@@ -57,7 +57,8 @@ def get_history(session_id: str, limit: int = config.MAX_HISTORY_TURNS) -> list[
 def clear_history(session_id: str):
     with _connect() as conn:
         conn.execute("DELETE FROM turns WHERE session_id = ?", (session_id,))
-        conn.execute("DELETE FROM session_state WHERE session_id = ?", (session_id,))
+        conn.execute(
+            "DELETE FROM session_state WHERE session_id = ?", (session_id,))
         conn.commit()
 
 
@@ -103,39 +104,39 @@ def condense_query(session_id: str, new_query: str) -> str:
 
     history_text = "\n".join(f"{h['role']}: {h['content']}" for h in history)
 
-    prompt = f"""You resolve follow-up questions in a conversation into standalone questions.
+    prompt = f"""Rewrite a follow-up question into a standalone question using ONLY the
+conversation history below.
 
 Conversation history:
 {history_text}
 
 Follow-up question: {new_query}
 
-Instructions:
-- Rewrite the follow-up so it can be understood with no access to the history above.
-- If it's already standalone, keep it unchanged.
-- Pay close attention to ordinal or positional references such as "the first one", "the
-  third project", "the second last thing", "the last one mentioned". Before answering,
-  explicitly count the items in the relevant list from the history: count forward from the
-  start for "first/second/third...", and count backward from the end for
-  "last/second-last/second-to-last/third-last...". Double-check your count is correct
-  before naming the item — a common mistake is picking the last item when asked for the
-  second-last, so verify by counting on your fingers, not by guessing.
-- Only resolve references using what is actually written in the history — never guess.
+Rules:
+- If the follow-up is already standalone, return it unchanged.
+- Resolve pronouns, ordinals, and references such as "the first one", "the third project",
+  "the last one", or "the second-last thing" using ONLY what is explicitly written in the
+  history.
+- Count list items carefully before resolving ordinal references.
+- Never invent a project, feature, technology, or fact.
+- Do not provide an explanation or reasoning trace.
 
-First, on 2-3 short scratch lines, show your counting/reasoning.
-Then, on the FINAL line of your response, write ONLY the rewritten standalone question,
-prefixed exactly with "STANDALONE:" and nothing else on that line.
+Return ONLY the rewritten standalone question, prefixed exactly with:
+STANDALONE:
 """
 
     try:
-        raw = complete(prompt, temperature=0.0)
+        raw = complete(prompt, temperature=0.0,
+                        max_tokens=config.CONDENSE_MAX_TOKENS)
         match = re.search(r"STANDALONE:\s*(.+)", raw)
         if match:
             rewritten = match.group(1).strip()
         else:
-            lines = [line.strip() for line in raw.strip().splitlines() if line.strip()]
+            lines = [line.strip()
+                     for line in raw.strip().splitlines() if line.strip()]
             rewritten = lines[-1] if lines else new_query
         return rewritten.strip('"')
     except Exception as e:
-        print(f"[memory] condense_query failed, falling back to raw query: {e}")
+        print(
+            f"[memory] condense_query failed, falling back to raw query: {e}")
         return new_query
