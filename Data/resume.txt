@@ -6,25 +6,38 @@ Languages - Python, SQL
 Foundational - DSA, Computer Networks, OOP, OS, DBMS/RDBMS, Machine Learning, LLMs, Git, GitHub
 Libraries - NumPy, Pandas, Matplotlib, Seaborn, Scikit-learn
 Frameworks - FastAPI, Streamlit, LangChain, LangGraph
-Databases - MySQL, PostgreSQL, SQLite, SQLAlchemy (ORM); FAISS, ChromaDB, DataStax AstraDB, Qdrant (vector databases)
-Additional - Docker, containers, images, deployment, CI/CD pipelines
+Databases - MySQL, PostgreSQL, SQLite, SQLAlchemy (ORM); FAISS, ChromaDB, Qdrant (vector databases)
+Additional - API, Rest APIs
 
 EXPERIENCE:
 Fresher -- no full-time work experience yet; actively building and shipping end-to-end AI and backend projects (below).
 
 PROJECTS:
 
-MediaShare
-An end-to-end, Instagram-style media sharing application built to practice backend engineering beyond basic CRUD. Implements OAuth2-based authentication and Pydantic data validation, with ImageKit for media storage and delivery.
-Tech: Python, FastAPI, SQLite, Pydantic, Streamlit, ImageKit, OAuth2
+HireMeAI — AI Portfolio Assistant with RAG Chatbot, JD Matcher & GitHub Agent check it out
+Python, FastAPI, Streamlit, FAISS, Groq, SQLite
+– Built an agentic assistant that answers profile questions via RAG, and autonomously reads its own GitHub repo
+through LLM tool-calling to answer implementation-level questions grounded in real code.
+– Built a JD-matching engine that scores resume fit (0–100) against a job posting using embedding similarity +
+LLM reasoning, with must-have vs. nice-to-have gap analysis.
+– Implemented history-aware conversation memory, streaming responses, and API rate limiting; deployed on
+Railway and Streamlit Cloud.
 
-HireMeAI
-A personal AI chatbot and resume/job-description matching tool. Answers questions about my background through a RAG-based chat interface, and separately scores how well a job description matches my resume using an LLM-based field-by-field comparison alongside an embedding similarity check. Includes a GitHub-reading agent that answers implementation-level questions about my other projects by reading their repositories directly. Built in raw Python without LangChain; includes per-IP rate limiting, upload size limits, and prompt-injection-resistant prompt design.
-Tech: FastAPI, Streamlit, SQLite, FAISS, Groq-hosted LLM
+ScrubGPT — YouTube Playlist to RAG Converter (multilingual)
+Python, FastAPI, Streamlit, Qdrant
+– Built a RAG system that ingests entire YouTube playlists and answers questions with citations traceable to exact
+timestamps.
+– Used hybrid retrieval (dense + BM25 sparse search, fused with tunable weights) with grounding checks to avoid
+hallucinated answers.
+– Designed a resumable ingestion pipeline with caching and failure recovery, plus a retrieval evaluation harness.
 
-YouTube RAG Converter
-Stores the transcript of an entire YouTube playlist or video into a vector database and answers questions about its content, with multilingual support.
-Tech: Python, vector database, LLM
+MediaShare — Backend-Focused Instagramesque Media Sharing App check it out
+Python, FastAPI, Streamlit, PostgreSQL, SQLAlchemy
+– Built a production-style backend beyond basic CRUD — OAuth2/JWT auth, per-user rate limiting, and
+ownership-enforced permissions.
+– Implemented self-healing schema migrations that add new columns to the live database without data loss.
+– Used async SQLAlchemy 2.0 on PostgreSQL (Supabase), with media served via ImageKit CDN and a
+documented REST API.
 
 EDUCATION:
 B.Tech, Mechanical Engineering -- Vellore Institute of Technology (VIT), Vellore -- 2026, CGPA: 7.8
