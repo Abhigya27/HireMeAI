@@ -19,8 +19,6 @@ def _get_backend_url() -> str:
 
 
 BACKEND_URL = _get_backend_url()
-RESUME_PATH = os.path.join(os.path.dirname(
-    os.path.dirname(__file__)), "Data", "abhigya.pdf")
 
 # ---- Edit these with your real links ----
 SOCIAL_LINKS = {
@@ -40,18 +38,6 @@ def render_sidebar():
     with st.sidebar:
         st.title("Abhigya Narain")
         st.caption("AI Engineer")  # edit as needed
-        if os.path.exists(RESUME_PATH):
-            with open(RESUME_PATH, "rb") as resume_file:
-                resume_data = resume_file.read()
-            st.download_button(
-                "Download Resume",
-                data=resume_data,
-                file_name="abhigya.pdf",
-                mime="application/pdf",
-                use_container_width=True,
-            )
-        else:
-            st.caption("Resume unavailable")
         st.divider()
         st.subheader("Email : narainabhigya27@gmail.com")
         st.subheader("Connect")
