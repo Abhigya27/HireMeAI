@@ -61,8 +61,8 @@ MAX_HISTORY_TURNS = 6
 # chunking: max words per chunk (whole paragraphs under this stay intact),
 # and how many trailing words carry over into the next chunk when a section
 # has to be split, so a fact near the boundary isn't lost from every chunk
-CHUNK_MAX_WORDS = 80
-CHUNK_OVERLAP_WORDS = 15
+CHUNK_MAX_WORDS = 90
+CHUNK_OVERLAP_WORDS = 20
 
 # ---------------------------------------------------------------------------
 # PROJECT REGISTRY / GITHUB ACCESS
