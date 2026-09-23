@@ -1,4 +1,4 @@
-# HireMeAI 🤖
+# HireMeAI 🤖 - [Open the app](https://hiremeai-ce6gubx4upanbsxgflracf.streamlit.app/)
 
 > An AI-powered portfolio assistant that lets recruiters, interviewers, and visitors **chat with a candidate's profile, explore projects, and evaluate a resume against a job description**.
 
