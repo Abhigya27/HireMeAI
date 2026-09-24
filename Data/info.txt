@@ -20,7 +20,7 @@ MediaShare's data layer uses async SQLAlchemy 2.0 on a persistent PostgreSQL dat
 
 HireMeAI is an AI-powered portfolio assistant I built that lets recruiters chat with my profile and evaluate my resume against a job description. It combines a history-aware RAG pipeline (FastEmbed and FAISS) for conversational Q&A with an agentic GitHub research agent. When asked implementation-level questions, the backend autonomously reads my repository's actual source code through LLM tool-calling and answers grounded in real code, not static text. 
 
-HireMeAI also runs a separate JD-matching engine that scores resume fit from 0 to 100 against a job posting using embeddings and LLM reasoning. Built with FastAPI, Streamlit, and SQLite; deployed on Railway.
+HireMeAI also runs a separate JD-matching engine that scores resume fit from 0 to 100 against a job posting using embeddings and LLM reasoning. Built with FastAPI, Streamlit, and SQLite; deployed on Railway and Streamlit Cloud. it does not use LangChain.
 
 ScrubGPT turns an entire YouTube playlist into a searchable, timestamp-aware knowledge base. It extracts transcripts, preserves timestamps by chunking before translation, and stores dense and BM25 sparse vectors in Qdrant for hybrid retrieval, combining semantic and keyword search rather than similarity alone. Answers pass a grounding check and cite the exact timestamp they came from, avoiding hallucinated answers. 
 
