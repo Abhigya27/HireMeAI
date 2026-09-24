@@ -199,16 +199,51 @@ def _looks_like_project_list_query(query: str) -> bool:
     )
 
 
+_DEEP_DIVE_TERMS_RE = re.compile(
+    r"\b("
+    r"code|implementation|implement|architecture|endpoint|api|backend|frontend|"
+    r"database|schema|authentication|oauth|jwt|logic|internals|internal|"
+    r"function|class|file|repository|repo|deployment|docker|container|"
+    r"how does|how did you build|how did you implement|walk me through|"
+    r"in depth|in detail|under the hood|technical deep dive|deep dive|"
+    # RAG/implementation-internals vocabulary -- these are exactly the kind
+    # of question the README says the GitHub deep-dive agent exists to
+    # answer (chunking strategy, retriever, embedding model, etc.), but were
+    # previously missing here, so they never tripped deep-dive detection.
+    r"chunk|chunking|chunks|retriever|retrieval|retrieve|embed|embedding|"
+    r"embeddings|vector|vectors|faiss|rag|overlap|similarity|token|tokens|"
+    r"pipeline|indexing"
+    r")\b"
+)
+
+
 def _looks_like_deep_dive(query: str) -> bool:
     q = _normalize(query)
-    return bool(re.search(
-        r"\b("
-        r"code|implementation|implement|architecture|endpoint|api|backend|frontend|"
-        r"database|schema|authentication|oauth|jwt|logic|internals|internal|"
-        r"function|class|file|repository|repo|deployment|docker|container|"
-        r"how does|how did you build|how did you implement|walk me through|"
-        r"in depth|in detail|under the hood|technical deep dive|deep dive"
-        r")\b", q))
+    return bool(_DEEP_DIVE_TERMS_RE.search(q))
+
+
+# Pronoun/self-reference toward "this chatbot" itself, e.g. "it", "you",
+# "this app/site/chatbot/assistant/system". A user talking to HireMeAI who
+# asks a technical question this way is necessarily asking about HireMeAI --
+# there's no other project the "it" could mean -- but _match_known_project
+# only matches an explicit configured name/alias, so on its own it never
+# resolves these.
+_SELF_REFERENTIAL_RE = re.compile(
+    r"\b(you|your|yours|it|its|this (app|site|chatbot|assistant|system|bot|website))\b"
+)
+
+
+def _looks_like_self_referential_technical_query(query: str) -> bool:
+    """True for pronoun-only technical questions about the chatbot the user
+    is currently talking to (e.g. "what retriever does it use", "how many
+    words do you chunk at a time"), which name no project explicitly but
+    can only mean HireMeAI. Deliberately conservative: requires BOTH a
+    self-referential pronoun AND a real technical term, so ordinary
+    questions like "what do you do" or "tell me about yourself" are
+    untouched and still handled by the general profile RAG path.
+    """
+    q = _normalize(query)
+    return bool(_SELF_REFERENTIAL_RE.search(q)) and bool(_DEEP_DIVE_TERMS_RE.search(q))
 
 
 def _looks_like_short_continuation(query: str) -> bool:
@@ -260,6 +295,12 @@ def route_project_query(query: str, active_project: str | None) -> dict:
         return {"action": "list_projects", "project_key": None}
 
     matched_project = _match_known_project(query)
+
+    # No explicit project named, but a pronoun-only technical question about
+    # "it"/"you" (chunking, retriever, embeddings, ...) can only mean
+    # HireMeAI, since that's the project the user is actually talking to.
+    if matched_project is None and _looks_like_self_referential_technical_query(query):
+        matched_project = "HireMeAI"
 
     # Short confirmations after discussing a single project stay attached to it.
     if matched_project is None and active_project in config.GITHUB_PROJECTS and _looks_like_short_continuation(query):
