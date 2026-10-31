@@ -1,0 +1,83 @@
+[
+  {
+    "id": "a01",
+    "project_key": "HireMeAI",
+    "question": "How does your RAG pipeline work?",
+    "expected_file_substring": "rag.py"
+  },
+  {
+    "id": "a02",
+    "project_key": "HireMeAI",
+    "question": "How do you split text into chunks for retrieval?",
+    "expected_file_substring": "rag.py"
+  },
+  {
+    "id": "a03",
+    "project_key": "HireMeAI",
+    "question": "How does HireMeAI do job description matching under the hood?",
+    "expected_file_substring": "ats.py"
+  },
+  {
+    "id": "a04",
+    "project_key": "HireMeAI",
+    "question": "How do you calculate the JD fit score in the code?",
+    "expected_file_substring": "ats.py"
+  },
+  {
+    "id": "a05",
+    "project_key": "HireMeAI",
+    "question": "How is rate limiting implemented in your backend?",
+    "expected_file_substring": [
+      "main.py",
+      "config.py"
+    ]
+  },
+  {
+    "id": "a06",
+    "project_key": "HireMeAI",
+    "question": "How does your conversation memory work in the code?",
+    "expected_file_substring": "memory.py"
+  },
+  {
+    "id": "a07",
+    "project_key": "HireMeAI",
+    "question": "How do you decide whether a question is about you? Show me the implementation.",
+    "expected_file_substring": "rag.py"
+  },
+  {
+    "id": "a08",
+    "project_key": "HireMeAI",
+    "question": "How does your GitHub project agent read repository files?",
+    "expected_file_substring": "project_agent.py"
+  },
+  {
+    "id": "a09",
+    "project_key": "HireMeAI",
+    "question": "How does your backend stream responses to the frontend?",
+    "expected_file_substring": [
+      "main.py",
+      "client.py"
+    ]
+  },
+  {
+    "id": "a10",
+    "project_key": "HireMeAI",
+    "question": "How do you validate and parse uploaded job description files in the backend?",
+    "expected_file_substring": [
+      "main.py",
+      "ats.py"
+    ]
+  },
+  {
+    "id": "a11",
+    "project_key": "HireMeAI",
+    "question": "How does the frontend of HireMeAI render the job match result?",
+    "expected_file_substring": "app.py"
+  },
+  {
+    "id": "a12",
+    "project_key": "HireMeAI",
+    "question": "How do you keep the FAISS index in sync with info.txt?",
+    "expected_file_substring": "rag.py"
+  }
+]

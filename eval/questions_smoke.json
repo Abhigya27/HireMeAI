@@ -1,0 +1,38 @@
+[
+  {
+    "id": "s01",
+    "type": "profile_fact",
+    "query": "Where did you study?",
+    "expected_substring": "computer science"
+  },
+  {
+    "id": "s02",
+    "type": "skill_fact",
+    "query": "What skills do you have in prompt engineering?",
+    "expected_substring": "prompt engineering"
+  },
+  {
+    "id": "s03",
+    "type": "project_fact",
+    "query": "What is MediaShare?",
+    "expected_substring": "Instagram-style"
+  },
+  {
+    "id": "s04",
+    "type": "project_fact",
+    "query": "Which vector database does ScrubGPT use?",
+    "expected_substring": "Qdrant"
+  },
+  {
+    "id": "s05",
+    "type": "project_fact",
+    "query": "What is HireMeAI built with?",
+    "expected_substring": "Groq"
+  },
+  {
+    "id": "s06",
+    "type": "project_fact",
+    "query": "What does the house price model predict?",
+    "expected_substring": "housing prices"
+  }
+]

@@ -1,0 +1,58 @@
+AI Engineer
+AI Workflows, Tool-Using Agents & Production Deployment
+
+ROLE OVERVIEW
+-------------
+
+We are looking for an AI Engineer to turn model capabilities into robust application workflows. You will connect LLMs and machine-learning components to internal tools, APIs, and databases; define when systems should act, ask for clarification, or stop; and help deploy and monitor these workflows. We value sound software engineering, clear evaluations, and safe failure handling over demos that work only on ideal inputs.
+
+KEY RESPONSIBILITIES
+--------------------
+
+  - Build Python services that combine LLM calls, deterministic business logic, tools, and existing backend systems.
+  - Implement controlled tool/function calling for tasks such as searching records, validating inputs, or invoking approved APIs.
+  - Model multi-step workflows with explicit states, timeouts, retries, and human approval for consequential actions.
+  - Create reusable service modules, request/response models, and API endpoints using FastAPI or an equivalent framework.
+  - Write evaluations and regression tests for task completion, tool selection, correct arguments, latency, and failure behavior.
+  - Integrate databases and external services while protecting credentials, enforcing authorization, and validating returned data.
+  - Containerize services with Docker and support deployment, monitoring, logging, and incident debugging.
+  - Work with product and engineering teammates to convert ambiguous requirements into maintainable, testable workflows.
+
+REQUIRED QUALIFICATIONS
+-----------------------
+
+  - Strong Python programming and practical understanding of HTTP, REST APIs, JSON, authentication, and error handling.
+  - Experience with a backend framework such as FastAPI or Flask and data validation using typed schemas or equivalent tools.
+  - Understanding of LLM API usage, tool/function calling, structured outputs, context limitations, and nondeterministic behavior.
+  - Basic database skills with SQL and/or a document store; ability to design simple queries and data models.
+  - Comfort with Git, environment variables and secret management, automated tests, and debugging from logs.
+  - Understanding of Docker fundamentals and one deployment environment, even if through a personal project.
+  - Ability to reason about reliability, authorization boundaries, prompt injection, retries, idempotency, and human-in-the-loop controls.
+
+PREFERRED QUALIFICATIONS
+------------------------
+
+  - Exposure to workflow/agent frameworks such as LangGraph or comparable orchestration tools.
+  - Experience with Redis, background jobs, queues, caching, or asynchronous Python.
+  - Familiarity with CI/CD, cloud services, application metrics, tracing, and cost/latency optimization.
+  - A project that integrates an AI workflow with a real API or database and includes tests plus deployment instructions.
+
+WHAT SUCCESS LOOKS LIKE
+-----------------------
+
+  - Deliver an AI workflow with clear state transitions, bounded tool access, retries, and recoverable failures.
+  - Provide automated tests or an evaluation suite that catches regressions before release.
+  - Deploy a maintainable service with documented setup, monitoring signals, and secure configuration.
+
+INDICATIVE HIRING PROCESS
+-------------------------
+
+Typical process: application review, Python/backend fundamentals, an AI workflow or system-design discussion, project walkthrough, and team conversation. The exact process may vary.
+Search keywords: AI engineering, Python, LLM APIs, tool calling, agents, workflow orchestration, LangGraph, FastAPI, REST, SQL, Docker, testing, CI/CD, observability, security, deployment
+
+ROLE DETAILS
+------------
+Employment type: Full-time
+Experience: 0-2 years; demonstrable end-to-end projects welcome
+Location: [City, India] / Hybrid or Remote by team agreement
+Team: AI Platform / Product Engineering

@@ -1,0 +1,103 @@
+{
+  "generated_at": "2026-10-29T22:56:47+00:00",
+  "commit": "unknown",
+  "transport": "direct",
+  "variance": {
+    "summary": {
+      "jds": 5,
+      "runs_per_jd": 5,
+      "std_definition": "sample standard deviation (n-1) of final_score across runs, per JD",
+      "avg_std": 4.11,
+      "max_std": 7.74,
+      "max_range": 17.299999999999997,
+      "total_failed_runs": 0
+    },
+    "per_jd": [
+      {
+        "jd_file": "eval\\sample_jds\\01_junior_ai_engineer_applied_ml.txt",
+        "scores": [
+          72.0,
+          72.0,
+          72.0,
+          78.0,
+          72.0
+        ],
+        "failures": 0,
+        "n": 5,
+        "mean": 73.2,
+        "std": 2.68,
+        "min": 72.0,
+        "max": 78.0,
+        "range": 6.0
+      },
+      {
+        "jd_file": "eval\\sample_jds\\02_generative_ai_rag_engineer.txt",
+        "scores": [
+          78.0,
+          88.0,
+          78.0,
+          88.0,
+          78.0
+        ],
+        "failures": 0,
+        "n": 5,
+        "mean": 82.0,
+        "std": 5.48,
+        "min": 78.0,
+        "max": 88.0,
+        "range": 10.0
+      },
+      {
+        "jd_file": "eval\\sample_jds\\03_ai_engineer_agents_and_deployment.txt",
+        "scores": [
+          78.0,
+          78.0,
+          80.0,
+          72.0,
+          72.0
+        ],
+        "failures": 0,
+        "n": 5,
+        "mean": 76.0,
+        "std": 3.74,
+        "min": 72.0,
+        "max": 80.0,
+        "range": 8.0
+      },
+      {
+        "jd_file": "eval\\sample_jds\\AI_Engineer_Job_Description.pdf",
+        "scores": [
+          72.0,
+          72.0,
+          72.0,
+          72.0,
+          89.3
+        ],
+        "failures": 0,
+        "n": 5,
+        "mean": 75.46,
+        "std": 7.74,
+        "min": 72.0,
+        "max": 89.3,
+        "range": 17.299999999999997
+      },
+      {
+        "jd_file": "eval\\sample_jds\\sample_ai_engineer_job_description.pdf",
+        "scores": [
+          78.0,
+          78.0,
+          78.0,
+          78.0,
+          80.0
+        ],
+        "failures": 0,
+        "n": 5,
+        "mean": 78.4,
+        "std": 0.89,
+        "min": 78.0,
+        "max": 80.0,
+        "range": 2.0
+      }
+    ]
+  }
+}

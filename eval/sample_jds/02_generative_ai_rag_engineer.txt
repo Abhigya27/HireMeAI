@@ -1,0 +1,57 @@
+Generative AI Engineer
+LLM Applications, Retrieval-Augmented Generation (RAG) & Evaluation
+
+ROLE OVERVIEW
+-------------
+
+We are seeking an early-career Generative AI Engineer to build useful LLM-powered workflows grounded in trusted company data. You will help implement document ingestion, chunking, embeddings, retrieval, prompt construction, structured outputs, and evaluation. The goal is not simply to call a model API: it is to build applications that are measurable, secure, observable, and dependable enough for real users.
+
+KEY RESPONSIBILITIES
+--------------------
+
+  - Develop LLM-backed features using hosted model APIs or approved open-source models.
+  - Build document ingestion pipelines for sources such as PDF, DOCX, HTML, and text, including parsing and metadata handling.
+  - Implement retrieval-augmented generation using chunking strategies, embedding models, vector search, and reranking when useful.
+  - Design prompts and structured-output schemas; validate model responses and handle refusals, empty results, and malformed output.
+  - Create evaluation datasets and measure retrieval quality, answer relevance, groundedness, latency, and cost.
+  - Build backend endpoints with FastAPI or a similar framework and integrate them with product interfaces and data stores.
+  - Add observability, tracing, error handling, rate-limit handling, and safeguards against prompt injection or sensitive-data exposure.
+  - Run experiments, compare alternatives, document results, and communicate limitations to product and engineering partners.
+
+REQUIRED QUALIFICATIONS
+-----------------------
+
+  - Strong Python fundamentals, including modular code, typing, exceptions, and environment/dependency management.
+  - Understanding of LLM concepts such as tokens, context windows, prompting, embeddings, hallucinations, and model limitations.
+  - Practical understanding of the RAG flow: ingestion, chunking, embedding, retrieval, context assembly, generation, and evaluation.
+  - Experience using at least one embedding model or vector-search option, such as FAISS, Qdrant, Chroma, or a managed vector database.
+  - Familiarity with APIs, JSON, FastAPI/Flask, Git, and basic SQL or document databases.
+  - Awareness of privacy, access control, prompt injection, citation/grounding, and the need to evaluate AI outputs systematically.
+
+PREFERRED QUALIFICATIONS
+------------------------
+
+  - Experience with LangChain, LlamaIndex, or a small implementation built with direct model/API calls.
+  - Exposure to conversation history, query rewriting, hybrid search, reranking, tool calling, or agent workflows.
+  - Experience deploying a project with Docker and using logs, traces, or an LLM evaluation/observability tool.
+  - A portfolio project that demonstrates retrieval quality and failure handling, not only a basic chatbot demo.
+
+WHAT SUCCESS LOOKS LIKE
+-----------------------
+
+  - Deliver a RAG workflow with traceable sources and a repeatable evaluation set.
+  - Demonstrate measurable improvements to retrieval or response quality without unreasonable latency or cost.
+  - Implement clear controls for document access, unsafe inputs, and unsupported answers.
+
+INDICATIVE HIRING PROCESS
+-------------------------
+
+Typical process: application review, LLM/RAG fundamentals, practical problem or project review, and team conversation. The exact process may vary.
+Search keywords: Generative AI, LLM, RAG, embeddings, vector database, FAISS, Qdrant, chunking, retrieval, reranking, prompt engineering, structured outputs, FastAPI, evaluation, guardrails, observability
+
+ROLE DETAILS
+------------
+Employment type: Full-time
+Experience: 0-2 years; projects, internships, or open-source work welcome
+Location: [City, India] / Hybrid or Remote by team agreement
+Team: Generative AI / Applied AI

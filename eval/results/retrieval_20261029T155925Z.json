@@ -1,0 +1,474 @@
+{
+  "generated_at": "2026-10-29T15:59:25+00:00",
+  "commit": "unknown",
+  "k": 3,
+  "followups_mode": "condense",
+  "info_path": null,
+  "questions_file": "eval/questions.json",
+  "n_evaluated": 30,
+  "n_skipped_unfilled": 0,
+  "n_skipped_other": 10,
+  "overall_hit_rate": 0.9,
+  "by_type": {
+    "followup": 1.0,
+    "profile_fact": 0.6667,
+    "project_fact": 1.0,
+    "skill_fact": 0.8333
+  },
+  "per_question": [
+    {
+      "id": "q01",
+      "type": "profile_fact",
+      "query": "Where did you study and what degree do you have?",
+      "retrieval_query": "Where did you study and what degree do you have?",
+      "expected": [
+        "Vellore Institute of Technology"
+      ],
+      "hit": false,
+      "retrieved_ids": [
+        2,
+        10,
+        0
+      ]
+    },
+    {
+      "id": "q02",
+      "type": "profile_fact",
+      "query": "What do you currently do / what is your current role?",
+      "retrieval_query": "What do you currently do / what is your current role?",
+      "expected": [
+        "currently practising AI engineering"
+      ],
+      "hit": false,
+      "retrieved_ids": [
+        10,
+        8,
+        2
+      ]
+    },
+    {
+      "id": "q03",
+      "type": "profile_fact",
+      "query": "How did you perform in your school exams?",
+      "retrieval_query": "How did you perform in your school exams?",
+      "expected": [
+        "83.3%"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        2,
+        0,
+        13
+      ]
+    },
+    {
+      "id": "q04",
+      "type": "profile_fact",
+      "query": "What are your career interests and goals?",
+      "retrieval_query": "What are your career interests and goals?",
+      "expected": [
+        "interested in working with AI"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        2,
+        14,
+        10
+      ]
+    },
+    {
+      "id": "q05",
+      "type": "profile_fact",
+      "query": "Which school did you attend?",
+      "retrieval_query": "Which school did you attend?",
+      "expected": [
+        "Loyola High School"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        0,
+        2,
+        1
+      ]
+    },
+    {
+      "id": "q06",
+      "type": "profile_fact",
+      "query": "What is your graduation year or academic performance?",
+      "retrieval_query": "What is your graduation year or academic performance?",
+      "expected": [
+        "CGPA of 7.8"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "id": "q07",
+      "type": "skill_fact",
+      "query": "Which programming languages do you know?",
+      "retrieval_query": "Which programming languages do you know?",
+      "expected": [
+        "proficient in Python and SQL"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        4,
+        2,
+        5
+      ]
+    },
+    {
+      "id": "q08",
+      "type": "skill_fact",
+      "query": "Which machine learning libraries or frameworks have you used?",
+      "retrieval_query": "Which machine learning libraries or frameworks have you used?",
+      "expected": [
+        "Seaborn"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        7,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "q09",
+      "type": "skill_fact",
+      "query": "Which databases or vector stores have you worked with?",
+      "retrieval_query": "Which databases or vector stores have you worked with?",
+      "expected": [
+        "ChromaDB"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        5,
+        13,
+        11
+      ]
+    },
+    {
+      "id": "q10",
+      "type": "skill_fact",
+      "query": "Which web frameworks have you built backends with?",
+      "retrieval_query": "Which web frameworks have you built backends with?",
+      "expected": [
+        "FastAPI for backend development"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        4,
+        5,
+        9
+      ]
+    },
+    {
+      "id": "q11",
+      "type": "skill_fact",
+      "query": "What deployment or DevOps tools do you know?",
+      "retrieval_query": "What deployment or DevOps tools do you know?",
+      "expected": [
+        "Docker, containers"
+      ],
+      "hit": false,
+      "retrieved_ids": [
+        13,
+        4,
+        12
+      ]
+    },
+    {
+      "id": "q12",
+      "type": "skill_fact",
+      "query": "What LLM tooling have you worked with?",
+      "retrieval_query": "What LLM tooling have you worked with?",
+      "expected": [
+        "LangChain and LangGraph"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        4,
+        11,
+        10
+      ]
+    },
+    {
+      "id": "q13",
+      "type": "project_fact",
+      "query": "What is MediaShare?",
+      "retrieval_query": "What is MediaShare?",
+      "expected": [
+        "Instagram-style"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        8,
+        9,
+        12
+      ]
+    },
+    {
+      "id": "q14",
+      "type": "project_fact",
+      "query": "What tech stack does MediaShare use?",
+      "retrieval_query": "What tech stack does MediaShare use?",
+      "expected": [
+        "Supabase"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        8,
+        9,
+        12
+      ]
+    },
+    {
+      "id": "q15",
+      "type": "project_fact",
+      "query": "What features does MediaShare have?",
+      "retrieval_query": "What features does MediaShare have?",
+      "expected": [
+        "OAuth2"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        8,
+        9,
+        12
+      ]
+    },
+    {
+      "id": "q16",
+      "type": "project_fact",
+      "query": "What does HireMeAI do?",
+      "retrieval_query": "What does HireMeAI do?",
+      "expected": [
+        "portfolio assistant"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "q17",
+      "type": "project_fact",
+      "query": "What does HireMeAI use for embeddings and vector search?",
+      "retrieval_query": "What does HireMeAI use for embeddings and vector search?",
+      "expected": [
+        "FastEmbed"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        10,
+        11,
+        12
+      ]
+    },
+    {
+      "id": "q18",
+      "type": "project_fact",
+      "query": "How does the job description matcher in HireMeAI work?",
+      "retrieval_query": "How does the job description matcher in HireMeAI work?",
+      "expected": [
+        "scores resume fit from 0 to 100"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        11,
+        10,
+        4
+      ]
+    },
+    {
+      "id": "q19",
+      "type": "project_fact",
+      "query": "What is ScrubGPT?",
+      "retrieval_query": "What is ScrubGPT?",
+      "expected": [
+        "timestamp-aware"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        12,
+        13,
+        11
+      ]
+    },
+    {
+      "id": "q20",
+      "type": "project_fact",
+      "query": "What vector database does ScrubGPT use?",
+      "retrieval_query": "What vector database does ScrubGPT use?",
+      "expected": [
+        "sparse vectors in Qdrant"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        12,
+        13,
+        5
+      ]
+    },
+    {
+      "id": "q21",
+      "type": "project_fact",
+      "query": "How does ScrubGPT process YouTube playlists?",
+      "retrieval_query": "How does ScrubGPT process YouTube playlists?",
+      "expected": [
+        "extracts transcripts"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        12,
+        13,
+        8
+      ]
+    },
+    {
+      "id": "q22",
+      "type": "project_fact",
+      "query": "What is the House Price Prediction project?",
+      "retrieval_query": "What is the House Price Prediction project?",
+      "expected": [
+        "house price prediction model"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        7,
+        10,
+        11
+      ]
+    },
+    {
+      "id": "q23",
+      "type": "project_fact",
+      "query": "Which libraries was the house price model built with?",
+      "retrieval_query": "Which libraries was the house price model built with?",
+      "expected": [
+        "built with numpy"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        7,
+        3,
+        5
+      ]
+    },
+    {
+      "id": "q24",
+      "type": "project_fact",
+      "query": "What kind of machine learning project have you built?",
+      "retrieval_query": "What kind of machine learning project have you built?",
+      "expected": [
+        "machine learning project"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        7,
+        4,
+        10
+      ]
+    },
+    {
+      "id": "q25",
+      "type": "followup",
+      "query": "What tech stack did it use?",
+      "retrieval_query": "What tech stack did MediaShare use?",
+      "expected": [
+        "Supabase",
+        "async SQLAlchemy"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        8,
+        9,
+        12
+      ]
+    },
+    {
+      "id": "q26",
+      "type": "followup",
+      "query": "How does it store the embeddings?",
+      "retrieval_query": "How does ScrubGPT store the embeddings?",
+      "expected": [
+        "sparse vectors in Qdrant"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        12,
+        13,
+        11
+      ]
+    },
+    {
+      "id": "q27",
+      "type": "followup",
+      "query": "What libraries did it use?",
+      "retrieval_query": "What libraries did the House Price Prediction model use?",
+      "expected": [
+        "built with numpy"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        7,
+        3,
+        5
+      ]
+    },
+    {
+      "id": "q28",
+      "type": "followup",
+      "query": "Can you explain the matching part more?",
+      "retrieval_query": "Can you explain the job description matching part of HireMeAI more?",
+      "expected": [
+        "scores resume fit from 0 to 100"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        11,
+        10,
+        4
+      ]
+    },
+    {
+      "id": "q29",
+      "type": "followup",
+      "query": "Tell me more about the third one.",
+      "retrieval_query": "Tell me more about ScrubGPT.",
+      "expected": [
+        "timestamp-aware",
+        "sparse vectors in Qdrant",
+        "extracts transcripts"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        12,
+        13,
+        8
+      ]
+    },
+    {
+      "id": "q30",
+      "type": "followup",
+      "query": "What about the first one?",
+      "retrieval_query": "What about MediaShare?",
+      "expected": [
+        "Instagram-style",
+        "OAuth2"
+      ],
+      "hit": true,
+      "retrieved_ids": [
+        8,
+        9,
+        12
+      ]
+    }
+  ]
+}

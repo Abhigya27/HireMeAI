@@ -1,0 +1,55 @@
+Junior AI Engineer
+Applied Machine Learning & Product Integration
+
+ROLE OVERVIEW
+-------------
+
+We are looking for a Junior AI Engineer to help build, test, and integrate practical machine-learning features into customer-facing products. You will work with software engineers and data practitioners to prepare datasets, train baseline models, evaluate results, expose predictions through APIs, and improve reliability based on feedback. This role is suitable for an early-career candidate who can write clean Python and explain the reasoning behind their technical choices.
+
+KEY RESPONSIBILITIES
+--------------------
+
+  - Translate product requirements into small, testable AI or machine-learning tasks in collaboration with the team.
+  - Clean, validate, transform, and analyze structured or text-based data using Python, pandas, and NumPy.
+  - Build baseline models with scikit-learn and compare approaches using appropriate validation methods and metrics.
+  - Create reproducible training and evaluation scripts; document assumptions, datasets, limitations, and results.
+  - Integrate model inference into Python services or REST APIs and collaborate on request/response schemas.
+  - Write unit tests, handle malformed inputs and edge cases, use Git for version control, and participate in code reviews.
+  - Monitor prediction quality and latency, investigate errors, and help improve model and data pipelines.
+
+REQUIRED QUALIFICATIONS
+-----------------------
+
+  - Proficiency in Python, including functions, modules, exceptions, virtual environments, and basic object-oriented programming.
+  - Working knowledge of pandas, NumPy, data cleaning, exploratory data analysis, and basic data visualization.
+  - Understanding of supervised learning, train/validation/test splits, overfitting, data leakage, and model evaluation.
+  - Experience with scikit-learn and metrics such as precision, recall, F1-score, ROC-AUC, MAE, or RMSE as appropriate.
+  - Familiarity with REST APIs, JSON, Git/GitHub, and basic SQL.
+  - Ability to explain a project clearly, including trade-offs, failure cases, and what you would improve next.
+
+PREFERRED QUALIFICATIONS
+------------------------
+
+  - Hands-on experience with FastAPI or Flask and writing automated tests with pytest.
+  - Exposure to PyTorch or TensorFlow, Docker, cloud deployment, or experiment tracking tools.
+  - A portfolio project that demonstrates an end-to-end workflow rather than only a notebook.
+
+WHAT SUCCESS LOOKS LIKE
+-----------------------
+
+  - Produce repeatable model experiments with clear evaluation results and documented limitations.
+  - Ship a small AI-backed feature behind a tested API with useful logging and input validation.
+  - Communicate progress early, respond constructively to feedback, and contribute maintainable code.
+
+INDICATIVE HIRING PROCESS
+-------------------------
+
+Typical process: application review, practical Python/ML discussion, project walkthrough, and team conversation. The exact process may vary.
+Search keywords: Python, pandas, NumPy, scikit-learn, machine learning, EDA, model evaluation, SQL, REST API, FastAPI, Flask, Git, testing, deployment
+
+ROLE DETAILS
+------------
+Employment type: Full-time
+Experience: 0-2 years; strong projects or internships welcome
+Location: [City, India] / Hybrid or Remote by team agreement
+Team: AI Engineering / Product

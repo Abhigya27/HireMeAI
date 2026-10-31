@@ -1,0 +1,62 @@
+[
+  {
+    "jd_file": "eval/sample_jds/jd_01.txt",
+    "manual_score": null,
+    "manual_verdict": null
+  },
+  {
+    "jd_file": "eval/sample_jds/jd_02.txt",
+    "manual_score": null,
+    "manual_verdict": null
+  },
+  {
+    "jd_file": "eval/sample_jds/jd_03.txt",
+    "manual_score": null,
+    "manual_verdict": null
+  },
+  {
+    "jd_file": "eval/sample_jds/jd_04.txt",
+    "manual_score": null,
+    "manual_verdict": null
+  },
+  {
+    "jd_file": "eval/sample_jds/jd_05.txt",
+    "manual_score": null,
+    "manual_verdict": null
+  },
+  {
+    "jd_file": "eval/sample_jds/jd_06.txt",
+    "manual_score": null,
+    "manual_verdict": null
+  },
+  {
+    "jd_file": "eval/sample_jds/jd_07.txt",
+    "manual_score": null,
+    "manual_verdict": null
+  },
+  {
+    "jd_file": "eval/sample_jds/jd_08.txt",
+    "manual_score": null,
+    "manual_verdict": null
+  },
+  {
+    "jd_file": "eval/sample_jds/jd_09.txt",
+    "manual_score": null,
+    "manual_verdict": null
+  },
+  {
+    "jd_file": "eval/sample_jds/jd_10.txt",
+    "manual_score": null,
+    "manual_verdict": null
+  },
+  {
+    "jd_file": "eval/sample_jds/jd_11.txt",
+    "manual_score": null,
+    "manual_verdict": null
+  },
+  {
+    "jd_file": "eval/sample_jds/jd_12.txt",
+    "manual_score": null,
+    "manual_verdict": null
+  }
+]
