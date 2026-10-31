@@ -1,6 +1,8 @@
 import json
 import logging
 import re
+import time
+from dataclasses import dataclass, field, asdict
 
 from backend import config
 import backend.github_client as github_client
@@ -14,6 +16,39 @@ logger = logging.getLogger(__name__)
 # instead of a fresh, unrelated mention. Never a real key in
 # config.GITHUB_PROJECTS, so it can't collide with an actual project.
 ALL_PROJECTS_KEY = "__all_projects__"
+
+
+@dataclass
+class AgentTrace:
+    """Per-request record of what a deep-dive did. Pass an instance to
+    answer_deep_dive(trace=...) to get it filled in; the same data is also
+    emitted as one JSON log line when the answer finishes streaming.
+
+    - num_tool_calls: read_file calls the model made (successful or not)
+    - files_read: paths successfully read, in order (duplicates kept)
+    - files_failed: paths that were missing/unreadable (or had bad arguments)
+    - research_rounds_used: tool-calling LLM round trips, including the final
+      round in which the model stopped asking for files
+    - exhausted_rounds: True if it hit DEEP_DIVE_MAX_ROUNDS while still asking
+      for files
+    - research_seconds: wall time until research finished (answer not yet streaming)
+    - wall_clock_seconds: wall time for the whole request, including the final
+      streamed answer; only set once the answer generator is fully consumed
+    - outcome: "answered", "no_project" or "no_file_list"
+    """
+    project_key: str = ""
+    question: str = ""
+    outcome: str = "answered"
+    num_tool_calls: int = 0
+    files_read: list[str] = field(default_factory=list)
+    files_failed: list[str] = field(default_factory=list)
+    research_rounds_used: int = 0
+    exhausted_rounds: bool = False
+    research_seconds: float | None = None
+    wall_clock_seconds: float | None = None
+
+    def to_dict(self) -> dict:
+        return asdict(self)
 
 
 def complete_with_tools(
@@ -450,7 +485,7 @@ End with one short, natural sentence inviting a deeper technical dive if they wa
     return _gen(), [repo_link, readme_link]
 
 
-def answer_deep_dive(project_key: str, user_question: str):
+def answer_deep_dive(project_key: str, user_question: str, trace: AgentTrace | None = None):
     """Stage 2: a small bounded tool-calling loop. The model sees the repo's
     file list, chooses which file(s) to read via the read_file tool
     (up to config.DEEP_DIVE_MAX_ROUNDS rounds, reading more if the first
@@ -458,10 +493,20 @@ def answer_deep_dive(project_key: str, user_question: str):
     streaming call turns whatever it found into a crisp, first-person answer
     (as Abhigya) so the reply appears live.
 
-    Returns (generator[str], links).
+    Returns (generator[str], links). If `trace` is given it is filled in as the
+    request runs (see AgentTrace); wall_clock_seconds is set once the returned
+    generator has been fully consumed.
     """
+    t_start = time.perf_counter()
+    if trace is None:
+        trace = AgentTrace()
+    trace.project_key = project_key
+    trace.question = user_question
+
     project = config.GITHUB_PROJECTS.get(project_key)
     if not project:
+        trace.outcome = "no_project"
+        trace.wall_clock_seconds = round(time.perf_counter() - t_start, 3)
         return _fake_stream(f'I don\'t have GitHub access wired up for "{project_key}" yet.'), []
 
     owner = project["owner"]
@@ -471,6 +516,8 @@ def answer_deep_dive(project_key: str, user_question: str):
 
     file_list = github_client.list_files(owner, repo, branch)
     if not file_list:
+        trace.outcome = "no_file_list"
+        trace.wall_clock_seconds = round(time.perf_counter() - t_start, 3)
         text = (
             f"I couldn't list files in **{project_key}**'s repository right now. "
             f"You can browse it directly here."
@@ -512,6 +559,7 @@ file list looks relevant, say so honestly instead of picking randomly.
 
     for _ in range(config.DEEP_DIVE_MAX_ROUNDS):
         message = complete_with_tools(messages, tools)
+        trace.research_rounds_used += 1
 
         if not message.tool_calls:
             # model didn't ask for any more files -- stop researching here.
@@ -522,6 +570,7 @@ file list looks relevant, say so honestly instead of picking randomly.
         messages.append(message.model_dump(exclude_none=True))
 
         for tool_call in message.tool_calls:
+            trace.num_tool_calls += 1
             path = ""
             try:
                 args = json.loads(tool_call.function.arguments)
@@ -533,9 +582,11 @@ file list looks relevant, say so honestly instead of picking randomly.
                 owner, repo, path, branch) if path else None
             if result is None:
                 tool_output = f"File not found or unreadable: {path}"
+                trace.files_failed.append(path or "<invalid arguments>")
             else:
                 file_text, file_link = result
                 read_links.append(file_link)
+                trace.files_read.append(path)
                 # keep any single file bounded so it can't blow the context budget
                 tool_output = file_text[:config.DEEP_DIVE_FILE_CHAR_CAP]
 
@@ -548,9 +599,12 @@ file list looks relevant, say so honestly instead of picking randomly.
             )
     else:
         # exhausted every round still asking for files
+        trace.exhausted_rounds = True
         logger.info(
             f"[project_agent] deep dive on {project_key} exhausted "
             f"{config.DEEP_DIVE_MAX_ROUNDS} rounds without finishing research")
+
+    trace.research_seconds = round(time.perf_counter() - t_start, 3)
 
     # Final, dedicated streaming call: force a plain-text answer now (no more
     # tool calls), grounded only in whatever was actually read above, kept
@@ -578,9 +632,15 @@ file list looks relevant, say so honestly instead of picking randomly.
         messages.append({"role": "user", "content": nudge})
 
     def _gen():
-        yield from stream_messages(
-            messages, model=config.CHAT_MODEL, temperature=0.2,
-            max_tokens=config.DEEP_DIVE_ANSWER_MAX_TOKENS,
-        )
+        try:
+            yield from stream_messages(
+                messages, model=config.CHAT_MODEL, temperature=0.2,
+                max_tokens=config.DEEP_DIVE_ANSWER_MAX_TOKENS,
+            )
+        finally:
+            # runs when the stream is exhausted (or closed early)
+            trace.wall_clock_seconds = round(time.perf_counter() - t_start, 3)
+            logger.info("[project_agent] deep_dive_trace %s",
+                        json.dumps(trace.to_dict()))
 
     return _gen(), [repo_link] + read_links
