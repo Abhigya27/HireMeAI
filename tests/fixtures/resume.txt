@@ -1,0 +1,5 @@
+Abhigya Narain - AI Engineer
+
+Skills: Python, FastAPI, SQL, FAISS, Streamlit, Docker.
+Projects: MediaShare (media sharing app), ScrubGPT (YouTube RAG chatbot), HireMeAI (portfolio chatbot).
+Education: B.Tech in Computer Science.

@@ -1,0 +1,11 @@
+Abhigya Narain is an AI engineer who studied computer science and enjoys building practical machine learning applications.
+
+Skills: Python, SQL, FastAPI, Streamlit, FAISS, and prompt engineering for large language models.
+
+MediaShare is an Instagram-style media sharing application where users upload photos and follow each other. It uses a REST backend with a relational database.
+
+ScrubGPT turns YouTube playlists into a retrieval augmented generation chatbot. It stores transcript embeddings in the Qdrant vector database.
+
+HireMeAI is a personal portfolio chatbot with a job description matcher. It uses FastAPI, FAISS and Groq hosted language models.
+
+House Price Prediction is a regression model that predicts housing prices from tabular features such as area and location.
