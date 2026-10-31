@@ -157,7 +157,7 @@ DEEP_DIVE_MAX_ROUNDS = 6
 
 # max characters kept from any single file the deep-dive agent reads, so one
 # huge file can't blow the context budget
-DEEP_DIVE_FILE_CHAR_CAP = 8000
+DEEP_DIVE_FILE_CHAR_CAP = 3500
 
 # --- safety / abuse protection ---
 
@@ -165,10 +165,17 @@ DEEP_DIVE_FILE_CHAR_CAP = 8000
 # sustained hourly cap, so a quick flurry of genuine use isn't blocked but
 # sustained hammering is. /match is limited tighter since one request costs
 # two LLM calls plus embeddings, not one.
-CHAT_RATE_LIMIT_SHORT = "15/minute"
-CHAT_RATE_LIMIT_LONG = "100/hour"
-MATCH_RATE_LIMIT_SHORT = "5/minute"
-MATCH_RATE_LIMIT_LONG = "20/hour"
+#
+# Each limit can be overridden with an environment variable of the same name
+# (e.g. MATCH_RATE_LIMIT_LONG="1000/hour"). Defaults are unchanged. This lets
+# the eval scripts (eval/latency_bench.py, eval/jd_matcher_eval.py) run against
+# a LOCAL backend without tripping the production limits. The limits are read
+# once at import time (slowapi decorators are evaluated when main.py loads), so
+# set the env vars before starting uvicorn.
+CHAT_RATE_LIMIT_SHORT = os.getenv("CHAT_RATE_LIMIT_SHORT", "15/minute")
+CHAT_RATE_LIMIT_LONG = os.getenv("CHAT_RATE_LIMIT_LONG", "100/hour")
+MATCH_RATE_LIMIT_SHORT = os.getenv("MATCH_RATE_LIMIT_SHORT", "5/minute")
+MATCH_RATE_LIMIT_LONG = os.getenv("MATCH_RATE_LIMIT_LONG", "20/hour")
 
 MAX_QUERY_LENGTH = 2000  # characters, per chat message
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20 MB, per JD file upload
