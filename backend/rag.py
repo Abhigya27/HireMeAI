@@ -199,10 +199,20 @@ def get_index() -> tuple[faiss.Index, list[str]]:
     return _index_cache, _chunks_cache
 
 
-def retrieve(query: str, index: faiss.Index, chunk_mapping: list[str], k: int = 5) -> list[str]:
+def retrieve_with_ids(
+    query: str, index: faiss.Index, chunk_mapping: list[str], k: int = 5
+) -> list[tuple[int, str]]:
+    """Like retrieve(), but also returns each chunk's position in the index
+    (its stable id for a given info.txt), best match first. The eval scripts
+    use the ids to report which chunks were retrieved.
+    """
     query_vec = embed_text(query)
     _distances, indices = index.search(np.array([query_vec]), k)
-    return [chunk_mapping[i] for i in indices[0] if i != -1]
+    return [(int(i), chunk_mapping[i]) for i in indices[0] if i != -1]
+
+
+def retrieve(query: str, index: faiss.Index, chunk_mapping: list[str], k: int = 5) -> list[str]:
+    return [text for _i, text in retrieve_with_ids(query, index, chunk_mapping, k)]
 
 
 def is_relevant_query(query: str, has_history: bool) -> bool:
