@@ -9,8 +9,8 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from backend import config, memory, project_agent
-from backend.rag import get_index, retrieve, build_answer_prompt, build_projects_overview_prompt, is_relevant_query
-from backend.client import stream_chat
+from backend.rag import get_index
+from backend.chat_pipeline import prepare_rag_turn, DECLINE_MESSAGE
 from backend.ats import extract_text, score_match_stream
 
 
@@ -125,43 +125,23 @@ def chat(request: Request, req: ChatRequest):
 
         return StreamingResponse(event_stream(), media_type="text/plain")
 
-    # 0b. general topic gate -- only reached for messages the project router
-    # didn't already claim. Keeps the chatbot from answering as a
+    # 0b. general RAG path (scope gate -> condense -> retrieve -> prompt).
+    # Lives in chat_pipeline.prepare_rag_turn so the eval scripts exercise the
+    # exact same code. The gate keeps the chatbot from answering as a
     # general-purpose assistant.
-    has_history = bool(memory.get_history(req.session_id, limit=1))
-    if not is_relevant_query(req.query, has_history):
-        decline = (
-            "I'm just here to talk about myself — my background, skills, projects, and "
-            "experience. Happy to help with any of that!"
-        )
+    turn = prepare_rag_turn(req.session_id, req.query)
+
+    if turn.declined:
         memory.save_turn(req.session_id, "user", req.query)
-        memory.save_turn(req.session_id, "assistant", decline)
+        memory.save_turn(req.session_id, "assistant", DECLINE_MESSAGE)
+        return StreamingResponse(turn.stream(), media_type="text/plain")
 
-        def decline_stream():
-            for i in range(0, len(decline), 40):
-                yield decline[i:i + 40]
-
-        return StreamingResponse(decline_stream(), media_type="text/plain")
-
-    # --- otherwise: existing RAG path, unchanged ---
-
-    # 1. resolve follow-up references ("what about him?") into a standalone query
-    standalone_query = memory.condense_query(req.session_id, req.query)
-
-    # 2. retrieve context using the standalone query
-    index, chunk_mapping = get_index()
-    chunks = retrieve(standalone_query, index, chunk_mapping)
-
-    # 3. build the final prompt with retrieved context + recent history
-    history = memory.get_history(req.session_id)
-    prompt = build_answer_prompt(chunks, standalone_query, history)
-
-    # 4. persist the user's turn now, assistant's turn once streaming finishes
+    # persist the user's turn now, assistant's turn once streaming finishes
     memory.save_turn(req.session_id, "user", req.query)
 
     def event_stream():
         full_reply = ""
-        for token in stream_chat(prompt, max_tokens=config.CHAT_MAX_TOKENS):
+        for token in turn.stream():
             full_reply += token
             yield token
         memory.save_turn(req.session_id, "assistant", full_reply)
