@@ -19,18 +19,30 @@ RESULT_MARKER = "<<<JD_MATCH_RESULT>>>"
 
 
 def extract_text(filename: str, file_bytes: bytes) -> str:
+    filename = filename or ""  # UploadFile.filename can be None
     ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
 
     if ext == "txt":
         return file_bytes.decode("utf-8", errors="ignore")
 
+    # Corrupt / encrypted / mislabeled files make pypdf and python-docx raise
+    # their own exception types. /match only turns ValueError into a 4xx, so
+    # translate them here -- otherwise a bad upload is a 500, not a 400.
     if ext == "pdf":
-        reader = PdfReader(io.BytesIO(file_bytes))
-        return "\n".join(page.extract_text() or "" for page in reader.pages)
+        try:
+            reader = PdfReader(io.BytesIO(file_bytes))
+            return "\n".join(page.extract_text() or "" for page in reader.pages)
+        except Exception as e:
+            raise ValueError(
+                "Could not read this PDF -- it may be corrupted or password-protected.") from e
 
     if ext == "docx":
-        doc = Document(io.BytesIO(file_bytes))
-        return "\n".join(p.text for p in doc.paragraphs)
+        try:
+            doc = Document(io.BytesIO(file_bytes))
+            return "\n".join(p.text for p in doc.paragraphs)
+        except Exception as e:
+            raise ValueError(
+                "Could not read this Word document -- it may be corrupted.") from e
 
     raise ValueError(
         f"Unsupported file type: .{ext or 'unknown'}. Use txt, pdf, or docx.")
@@ -304,7 +316,7 @@ def score_match_stream(jd_text: str):
 
     full_text = ""
     for chunk in stream_chat(
-        prompt, model=config.MATCH_MODEL, temperature=0.3,
+        prompt, model=config.MATCH_MODEL, temperature=0,
         max_tokens=config.MATCH_MAX_TOKENS,
     ):
         full_text += chunk
