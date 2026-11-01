@@ -2,6 +2,7 @@ import hashlib
 import os
 import pickle
 import re
+from datetime import date
 
 import faiss
 import numpy as np
@@ -215,6 +216,66 @@ def retrieve(query: str, index: faiss.Index, chunk_mapping: list[str], k: int = 
     return [text for _i, text in retrieve_with_ids(query, index, chunk_mapping, k)]
 
 
+def _profile_birth_date(profile_text: str) -> date | None:
+    """Extract a birth date from the profile, supporting dd/mm/yyyy and yyyy-mm-dd."""
+    patterns = [
+        r"\bborn\s+(?:on\s+)?(?:(\d{1,2})[/-](\d{1,2})[/-](\d{4})|(\d{4})[/-](\d{1,2})[/-](\d{1,2}))",
+        r"\b(?:date of birth|birthday)\s*[:\-]?\s*(?:(\d{1,2})[/-](\d{1,2})[/-](\d{4})|(\d{4})[/-](\d{1,2})[/-](\d{1,2}))",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, profile_text, flags=re.IGNORECASE)
+        if not match:
+            continue
+        if match.group(1) and match.group(2) and match.group(3):
+            day, month, year = match.group(1), match.group(2), match.group(3)
+        elif match.group(4) and match.group(5) and match.group(6):
+            year, month, day = match.group(4), match.group(5), match.group(6)
+        else:
+            continue
+        try:
+            return date(int(year), int(month), int(day))
+        except ValueError:
+            continue
+    return None
+
+
+def answer_direct_profile_fact(query: str, profile_text: str) -> str | None:
+    """Handle direct personal facts like age/birthdate without depending on fuzzy retrieval."""
+    if not profile_text:
+        return None
+
+    q = query.lower()
+    birth = _profile_birth_date(profile_text)
+    if birth is None:
+        return None
+
+    age_patterns = [
+        r"\bhow old are you\b",
+        r"\bwhat['’]?s your age\b",
+        r"\bwhat is your age\b",
+        r"\bwhat age are you\b",
+        r"\byears old\b",
+    ]
+    birthday_patterns = [
+        r"\bwhen were you born\b",
+        r"\bwhat['’]?s your date of birth\b",
+        r"\bwhat is your date of birth\b",
+        r"\bbirthday\b",
+        r"\bdate of birth\b",
+    ]
+
+    if any(re.search(p, q) for p in age_patterns):
+        today = date.today()
+        age = today.year - birth.year - \
+            ((today.month, today.day) < (birth.month, birth.day))
+        return f"I was born on {birth.strftime('%d/%m/%Y')}, so I’m {age} years old."
+
+    if any(re.search(p, q) for p in birthday_patterns):
+        return f"I was born on {birth.strftime('%d/%m/%Y')}."
+
+    return None
+
+
 def is_relevant_query(query: str, has_history: bool) -> bool:
     """Cheap scope gate: is this actually about Abhigya Narain -- his
     background, skills, education, projects, or experience -- or something
@@ -229,6 +290,9 @@ def is_relevant_query(query: str, has_history: bool) -> bool:
     question is worse than occasionally letting an edge case through, since
     build_answer_prompt's own grounding rules are the real backstop.
     """
+    if answer_direct_profile_fact(query, open(config.INFO_TXT_PATH, "r", encoding="utf-8").read()):
+        return True
+
     context_note = (
         "This is a follow-up in an ongoing conversation that has already been about "
         "Abhigya -- treat short or ambiguous messages (e.g. 'yes', 'the first one', "
