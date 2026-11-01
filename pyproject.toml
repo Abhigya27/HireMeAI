@@ -8,30 +8,30 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "config>=0.5.1",
-    "faiss-cpu>=1.15.0",
-    "fastapi>=0.141.1",
-    "fastembed>=0.8.0",
+    "faiss-cpu>=1.15.1",
+    "fastapi>=0.162.0",
+    "fastembed>=0.9.1",
     "groq>=1.7.0",
     "httpx>=0.28.1",
-    "numpy>=2.5.3",
-    "pydantic>=2.13.5",
-    "pypdf>=6.18.0",
+    "numpy>=2.5.4",
+    "pypdf>=6.21.2",
     "pyproject-toml>=0.1.0",
+    "pytest>=9.1.1",
     "python-docx>=1.2.0",
-    "python-dotenv>=1.2.3",
+    "python-dotenv>=1.2.4",
     "python-multipart>=0.0.32",
-    "slowapi",
-    "streamlit>=1.63.0",
-    "uvicorn[standard]>=0.52.4",
+    "slowapi>=0.1.10",
+    "streamlit>=1.66.1",
+    "uvicorn>=0.54.0",
 ]
 
-[project.scripts]
-hiremeai = "hiremeai:main"
-
-[build-system]
-requires = ["uv_build>=0.12.9,<0.13.0"]
-build-backend = "uv_build"
+[tool.pytest.ini_options]
+pythonpath = ["."]
 
 [tool.uv]
 package = false
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
