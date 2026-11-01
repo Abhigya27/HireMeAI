@@ -239,15 +239,50 @@ def _profile_birth_date(profile_text: str) -> date | None:
     return None
 
 
+def _rewrite_profile_sentence_to_first_person(sentence: str) -> str:
+    """Convert a third-person profile sentence into natural first-person wording."""
+    text = sentence.strip()
+    replacements = [
+        (r"\bAbhigya Narain\b", "I"),
+        (r"\bAbhigya\b", "I"),
+        (r"\bHis\b", "My"),
+        (r"\bHe\b", "I"),
+        (r"\bmyself\b", "myself"),
+    ]
+    for pattern, replacement in replacements:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+
+def _best_matching_profile_sentence(query: str, profile_text: str, pattern_groups: list[tuple[list[str], list[str]]]) -> str | None:
+    """Pick the sentence in the profile most likely to satisfy a direct fact question."""
+    q = query.lower()
+    sentences = [s.strip() for s in re.split(
+        r"(?<=[.!?])\s+", profile_text) if s.strip()]
+    scored: list[tuple[int, str]] = []
+
+    for sentence in sentences:
+        s_lower = sentence.lower()
+        for question_patterns, required_tokens in pattern_groups:
+            if any(re.search(pattern, q) for pattern in question_patterns):
+                overlap = sum(
+                    1 for token in required_tokens if token in s_lower)
+                if overlap > 0:
+                    scored.append((overlap, sentence))
+                    break
+
+    if not scored:
+        return None
+    return max(scored, key=lambda item: item[0])[1]
+
+
 def answer_direct_profile_fact(query: str, profile_text: str) -> str | None:
-    """Handle direct personal facts like age/birthdate without depending on fuzzy retrieval."""
+    """Answer direct personal facts from the profile without relying only on fuzzy retrieval."""
     if not profile_text:
         return None
 
     q = query.lower()
     birth = _profile_birth_date(profile_text)
-    if birth is None:
-        return None
 
     age_patterns = [
         r"\bhow old are you\b",
@@ -264,14 +299,48 @@ def answer_direct_profile_fact(query: str, profile_text: str) -> str | None:
         r"\bdate of birth\b",
     ]
 
-    if any(re.search(p, q) for p in age_patterns):
+    if birth is not None and any(re.search(p, q) for p in age_patterns):
         today = date.today()
         age = today.year - birth.year - \
             ((today.month, today.day) < (birth.month, birth.day))
         return f"I was born on {birth.strftime('%d/%m/%Y')}, so I’m {age} years old."
 
-    if any(re.search(p, q) for p in birthday_patterns):
+    if birth is not None and any(re.search(p, q) for p in birthday_patterns):
         return f"I was born on {birth.strftime('%d/%m/%Y')}."
+
+    school_patterns = [
+        r"\bwhat school\b",
+        r"\bwhich school\b",
+        r"\bwhere did you study\b",
+        r"\bwhere did you go to school\b",
+        r"\bwhat college\b",
+        r"\bwhat university\b",
+    ]
+    degree_patterns = [
+        r"\bwhat degree\b",
+        r"\bwhat did you study\b",
+        r"\bwhat major\b",
+        r"\bwhat are you studying\b",
+    ]
+    graduation_patterns = [
+        r"\bwhen did you graduate\b",
+        r"\bwhat year did you graduate\b",
+        r"\bwhen did you complete your degree\b",
+        r"\bwhat year did you finish school\b",
+    ]
+
+    fact_groups = [
+        (school_patterns, ["school", "graduating", "b.tech",
+         "vIT", "university", "college", "institute"]),
+        (degree_patterns, ["b.tech", "mechanical engineering",
+         "graduating", "degree", "education"]),
+        (graduation_patterns, ["graduating", "2026", "b.tech", "degree"]),
+    ]
+
+    best_sentence = _best_matching_profile_sentence(
+        q, profile_text, fact_groups)
+    if best_sentence is not None:
+        return _rewrite_profile_sentence_to_first_person(best_sentence)
 
     return None
 
