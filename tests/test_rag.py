@@ -15,18 +15,21 @@ def test_short_paragraphs_stay_whole_one_chunk_each():
 
 
 def test_blank_lines_and_whitespace_never_produce_empty_chunks():
-    chunks = rag.chunk_text("\n\n  Alpha beta.  \n\n\n\n  \n\nGamma delta.\n\n", 50, 0)
+    chunks = rag.chunk_text(
+        "\n\n  Alpha beta.  \n\n\n\n  \n\nGamma delta.\n\n", 50, 0)
     assert chunks == ["Alpha beta.", "Gamma delta."]
 
 
 def test_long_paragraph_splits_on_sentence_boundaries_only():
-    sentences = [f"Sentence number {i} ends right here." for i in range(10)]  # 6 words each
+    # 6 words each
+    sentences = [f"Sentence number {i} ends right here." for i in range(10)]
     chunks = rag.chunk_text(" ".join(sentences), max_words=20, overlap_words=0)
 
     assert len(chunks) > 1
     for chunk in chunks:
         assert len(chunk.split()) <= 20
-        assert chunk.startswith("Sentence number")   # never starts mid-sentence
+        # never starts mid-sentence
+        assert chunk.startswith("Sentence number")
         assert chunk.endswith("here.")               # never ends mid-sentence
     # nothing lost, nothing duplicated (overlap is 0)
     assert " ".join(chunks).split() == " ".join(sentences).split()
@@ -43,7 +46,8 @@ def test_overlap_carries_trailing_words_into_next_chunk():
 
 
 def test_single_oversized_sentence_falls_back_to_word_slices():
-    words = [f"w{i}" for i in range(50)]            # no punctuation -> one 50-word "sentence"
+    # no punctuation -> one 50-word "sentence"
+    words = [f"w{i}" for i in range(50)]
     chunks = rag.chunk_text(" ".join(words), max_words=20, overlap_words=5)
 
     assert all(len(c.split()) <= 20 for c in chunks)
@@ -103,7 +107,8 @@ def test_unchanged_info_txt_loads_persisted_index_without_rebuild(monkeypatch):
     monkeypatch.setattr(rag, "_index_source_fingerprint", None)
 
     def must_not_rebuild():
-        raise AssertionError("index was rebuilt although info.txt is unchanged")
+        raise AssertionError(
+            "index was rebuilt although info.txt is unchanged")
 
     monkeypatch.setattr(rag, "_build_index_from_source", must_not_rebuild)
     index, chunks = rag.get_index()
@@ -127,7 +132,8 @@ def test_corrupt_chunk_mapping_triggers_rebuild(isolated_env, monkeypatch):
 # --------------------------------------------------------------------------
 def test_known_query_returns_expected_top_chunk():
     index, chunks = rag.get_index()
-    top = rag.retrieve("Which vector database does ScrubGPT use?", index, chunks, k=1)
+    top = rag.retrieve(
+        "Which vector database does ScrubGPT use?", index, chunks, k=1)
     assert len(top) == 1 and "Qdrant" in top[0]
 
 
@@ -152,12 +158,14 @@ def test_retrieve_respects_k():
 # --------------------------------------------------------------------------
 def test_scope_gate_returns_false_when_llm_says_no(mock_llm):
     mock_llm.when("scope gate", "NO")
-    assert rag.is_relevant_query("write me a poem about clouds", has_history=False) is False
+    assert rag.is_relevant_query(
+        "write me a poem about clouds", has_history=False) is False
 
 
 def test_scope_gate_returns_true_when_llm_says_yes(mock_llm):
     mock_llm.when("scope gate", "YES")
-    assert rag.is_relevant_query("what are your skills", has_history=False) is True
+    assert rag.is_relevant_query(
+        "what are your skills", has_history=False) is True
 
 
 def test_scope_gate_fails_open_when_llm_errors(mock_llm):
@@ -171,3 +179,11 @@ def test_answer_prompt_contains_context_question_and_history():
     assert "Chunk about Qdrant." in prompt
     assert "What DB?" in prompt
     assert "earlier question" in prompt
+
+
+def test_age_question_uses_birthdate_in_profile_text():
+    profile = "Abhigya Narain was born on 23/04/2003. He completed his schooling..."
+    answer = rag.answer_direct_profile_fact("how old are you?", profile)
+    assert answer is not None
+    assert "23/04/2003" in answer
+    assert "23" in answer or "years old" in answer.lower()
