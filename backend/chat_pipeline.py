@@ -12,7 +12,13 @@ from dataclasses import dataclass, field
 
 from backend import config, memory
 from backend.client import stream_chat
-from backend.rag import get_index, retrieve, build_answer_prompt, is_relevant_query
+from backend.rag import (
+    answer_direct_profile_fact,
+    build_answer_prompt,
+    get_index,
+    is_relevant_query,
+    retrieve,
+)
 
 DECLINE_MESSAGE = (
     "I'm just here to talk about myself — my background, skills, projects, and "
@@ -24,7 +30,8 @@ DECLINE_MESSAGE = (
 class RagTurn:
     declined: bool                      # True -> the scope gate rejected the message
     standalone_query: str               # follow-up resolved into a standalone question
-    chunks: list[str] = field(default_factory=list)   # retrieved context (empty if declined)
+    # retrieved context (empty if declined)
+    chunks: list[str] = field(default_factory=list)
     prompt: str | None = None           # final LLM prompt (None if declined)
 
     def stream(self):
@@ -47,6 +54,23 @@ def prepare_rag_turn(session_id: str, query: str, k: int | None = None) -> RagTu
         return RagTurn(declined=True, standalone_query=query)
 
     standalone_query = memory.condense_query(session_id, query)
+
+    profile_text = ""
+    try:
+        with open(config.INFO_TXT_PATH, "r", encoding="utf-8") as f:
+            profile_text = f.read()
+    except OSError:
+        profile_text = ""
+
+    direct_fact_answer = answer_direct_profile_fact(
+        standalone_query, profile_text)
+
+    if direct_fact_answer is not None:
+        history = memory.get_history(session_id)
+        prompt = build_answer_prompt(
+            [direct_fact_answer], standalone_query, history)
+        return RagTurn(declined=False, standalone_query=standalone_query,
+                       chunks=[direct_fact_answer], prompt=prompt)
 
     index, chunk_mapping = get_index()
     chunks = (
